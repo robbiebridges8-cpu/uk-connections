@@ -61,6 +61,27 @@
             color: #1a1a2e;
         }
 
+        /* Loading state */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #1a1a2e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Mistakes indicator */
         .mistakes {
             display: flex;
@@ -450,6 +471,12 @@
             <span>Played: <strong id="playedCount">0</strong></span>
         </div>
 
+        <!-- Loading state -->
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Loading today's puzzle...</p>
+        </div>
+
         <!-- No puzzle for today -->
         <div class="no-puzzle hidden" id="noPuzzle">
             <h2>No Puzzle Today</h2>
@@ -465,7 +492,7 @@
         </div>
 
         <!-- Game area -->
-        <div id="gameArea">
+        <div id="gameArea" class="hidden">
             <div class="mistakes" id="mistakes">
                 <div class="mistake-dot"></div>
                 <div class="mistake-dot"></div>
@@ -537,67 +564,26 @@
     <div class="celebration" id="celebration"></div>
 
     <script>
-        // ===== PUZZLE DATA =====
-        // Each puzzle has a date (YYYY-MM-DD) - only that puzzle shows on that day
-        const puzzles = [
-            {
-                date: "2026-02-25",
-                categories: [
-                    { name: "___ United (English Football)", colour: "green", words: ["LEEDS", "MANCHESTER", "NEWCASTLE", "SHEFFIELD"] },
-                    { name: "Great ___", colour: "yellow", words: ["BRITAIN", "FIRE", "WALL", "DANE"] },
-                    { name: "London Underground Lines", colour: "orange", words: ["CENTRAL", "JUBILEE", "NORTHERN", "BAKERLOO"] },
-                    { name: "Recent UK PM Surnames", colour: "purple", words: ["MAJOR", "BLAIR", "BROWN", "MAY"] }
-                ]
-            },
-            {
-                date: "2026-02-26",
-                categories: [
-                    { name: "London Boroughs", colour: "green", words: ["CAMDEN", "HACKNEY", "LAMBETH", "BRENT"] },
-                    { name: "___ Bridge (UK Bridges)", colour: "yellow", words: ["TOWER", "CLIFTON", "FORTH", "HUMBER"] },
-                    { name: "Home Counties", colour: "orange", words: ["KENT", "ESSEX", "SURREY", "BUCKS"] },
-                    { name: "Scottish Cities", colour: "purple", words: ["EDINBURGH", "GLASGOW", "DUNDEE", "ABERDEEN"] }
-                ]
-            },
-            {
-                date: "2026-02-27",
-                categories: [
-                    { name: "BBC TV Channels", colour: "green", words: ["ONE", "TWO", "THREE", "FOUR"] },
-                    { name: "Cadbury Chocolate Bars", colour: "yellow", words: ["TWIRL", "WISPA", "BOOST", "FLAKE"] },
-                    { name: "British Slang for Money", colour: "orange", words: ["QUID", "BOB", "TENNER", "FIVER"] },
-                    { name: "Beatles' First Names", colour: "purple", words: ["JOHN", "PAUL", "GEORGE", "RINGO"] }
-                ]
-            },
-            {
-                date: "2026-02-28",
-                categories: [
-                    { name: "Commonwealth Capital Cities", colour: "green", words: ["CANBERRA", "OTTAWA", "WELLINGTON", "DELHI"] },
-                    { name: "British Biscuits", colour: "yellow", words: ["DIGESTIVE", "HOBNOB", "BOURBON", "CUSTARD"] },
-                    { name: "___ Minister (UK Government)", colour: "orange", words: ["PRIME", "FOREIGN", "HOME", "DEFENCE"] },
-                    { name: "Summer Olympic Host Cities", colour: "purple", words: ["LONDON", "PARIS", "TOKYO", "BEIJING"] }
-                ]
-            },
-            {
-                date: "2026-03-01",
-                categories: [
-                    { name: "London Airports", colour: "green", words: ["HEATHROW", "GATWICK", "STANSTED", "LUTON"] },
-                    { name: "Oxford Colleges", colour: "yellow", words: ["BALLIOL", "MAGDALEN", "EXETER", "KEBLE"] },
-                    { name: "British Newspapers", colour: "orange", words: ["GUARDIAN", "TIMES", "TELEGRAPH", "MIRROR"] },
-                    { name: "UK Political Parties", colour: "purple", words: ["LABOUR", "TORY", "LIBERAL", "GREEN"] }
-                ]
-            }
-            // Add more puzzles here with their dates
-        ];
+        // ===== CONFIGURATION =====
+        // Replace this URL with your published Google Sheet CSV URL
+        // To get this URL:
+        // 1. Open your Google Sheet
+        // 2. File → Share → Publish to web
+        // 3. Select the sheet tab, choose CSV format
+        // 4. Click Publish and copy the URL
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/YOUR_SHEET_ID/pub?output=csv';
 
         // ===== GAME STATE =====
         let currentPuzzle = null;
         let remainingWords = [];
         let selectedWords = [];
         let solvedCategories = [];
-        let guessHistory = []; // Track order of guesses for share grid
+        let guessHistory = [];
         let mistakes = 0;
         let gameOver = false;
 
         // ===== DOM ELEMENTS =====
+        const loadingEl = document.getElementById('loading');
         const gameAreaEl = document.getElementById('gameArea');
         const gridEl = document.getElementById('grid');
         const submitBtn = document.getElementById('submitBtn');
@@ -665,25 +651,181 @@
             return arr;
         }
 
+        // ===== CSV PARSING =====
+        function parseCSV(csv) {
+            const lines = csv.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const puzzles = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length < 9) continue; // Skip incomplete rows
+
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index]?.trim() || '';
+                });
+
+                // Skip empty rows
+                if (!row.date) continue;
+
+                // Parse the puzzle
+                const puzzle = {
+                    date: normalizeDate(row.date),
+                    categories: [
+                        {
+                            name: row.green_category || row.green,
+                            colour: 'green',
+                            words: parseWords(row.green_words || row.green_tiles)
+                        },
+                        {
+                            name: row.yellow_category || row.yellow,
+                            colour: 'yellow',
+                            words: parseWords(row.yellow_words || row.yellow_tiles)
+                        },
+                        {
+                            name: row.orange_category || row.orange,
+                            colour: 'orange',
+                            words: parseWords(row.orange_words || row.orange_tiles)
+                        },
+                        {
+                            name: row.purple_category || row.purple,
+                            colour: 'purple',
+                            words: parseWords(row.purple_words || row.purple_tiles)
+                        }
+                    ]
+                };
+
+                if (validatePuzzle(puzzle)) {
+                    puzzles.push(puzzle);
+                }
+            }
+
+            return puzzles;
+        }
+
+        function parseCSVLine(line) {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    values.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            values.push(current);
+            return values;
+        }
+
+        function parseWords(wordsStr) {
+            if (!wordsStr) return [];
+            // Split by comma, pipe, or semicolon
+            return wordsStr.split(/[,|;]/).map(w => w.trim().toUpperCase()).filter(w => w);
+        }
+
+        function normalizeDate(dateStr) {
+            // Handle various date formats
+            // DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, etc.
+            if (!dateStr) return '';
+
+            // Already in YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                return dateStr;
+            }
+
+            // Try DD/MM/YYYY (UK format)
+            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+                const parts = dateStr.split('/');
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+
+            // Try parsing with Date object as fallback
+            try {
+                const date = new Date(dateStr);
+                if (!isNaN(date.getTime())) {
+                    return date.toISOString().split('T')[0];
+                }
+            } catch (e) {}
+
+            return dateStr;
+        }
+
         function validatePuzzle(puzzle) {
+            if (!puzzle.date) return false;
+
             const allWords = puzzle.categories.flatMap(c => c.words);
             const uniqueWords = new Set(allWords);
+
             if (allWords.length !== 16) {
-                console.error(`Puzzle for ${puzzle.date} does not have exactly 16 words`);
+                console.warn(`Puzzle for ${puzzle.date} does not have exactly 16 words (has ${allWords.length})`);
                 return false;
             }
             if (uniqueWords.size !== 16) {
-                console.error(`Puzzle for ${puzzle.date} has duplicate words`);
+                console.warn(`Puzzle for ${puzzle.date} has duplicate words`);
                 return false;
             }
             return true;
+        }
+
+        // ===== FETCH PUZZLES =====
+        async function fetchPuzzles() {
+            try {
+                // Check if we have a valid sheet URL configured
+                if (SHEET_URL.includes('YOUR_SHEET_ID')) {
+                    console.log('No Google Sheet configured, using fallback puzzles');
+                    return getFallbackPuzzles();
+                }
+
+                const response = await fetch(SHEET_URL);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch puzzles');
+                }
+
+                const csv = await response.text();
+                const puzzles = parseCSV(csv);
+
+                if (puzzles.length === 0) {
+                    console.warn('No valid puzzles found in sheet');
+                    return getFallbackPuzzles();
+                }
+
+                return puzzles;
+            } catch (error) {
+                console.error('Error fetching puzzles:', error);
+                return getFallbackPuzzles();
+            }
+        }
+
+        function getFallbackPuzzles() {
+            // Fallback puzzles if Google Sheet is not configured or fails
+            return [
+                {
+                    date: getTodayString(),
+                    categories: [
+                        { name: "___ United (English Football)", colour: "green", words: ["LEEDS", "MANCHESTER", "NEWCASTLE", "SHEFFIELD"] },
+                        { name: "Great ___", colour: "yellow", words: ["BRITAIN", "FIRE", "WALL", "DANE"] },
+                        { name: "London Underground Lines", colour: "orange", words: ["CENTRAL", "JUBILEE", "NORTHERN", "BAKERLOO"] },
+                        { name: "Recent UK PM Surnames", colour: "purple", words: ["MAJOR", "BLAIR", "BROWN", "MAY"] }
+                    ]
+                }
+            ];
         }
 
         // ===== LOCAL STORAGE =====
         function getStats() {
             const stats = localStorage.getItem('connections_stats_v2');
             return stats ? JSON.parse(stats) : {
-                played: {}, // { "2026-02-25": { won: true, mistakes: 2, guessHistory: [...] } }
+                played: {},
                 streak: 0,
                 lastPlayedDate: null
             };
@@ -717,14 +859,11 @@
             const yesterdayStr = yesterday.toISOString().split('T')[0];
 
             if (won) {
-                // If played and won yesterday, increment streak
                 if (stats.lastPlayedDate === yesterdayStr && stats.played[yesterdayStr]?.won) {
                     return stats.streak + 1;
                 }
-                // If this is first play or gap in days, start new streak
                 return 1;
             } else {
-                // Lost - streak resets
                 return 0;
             }
         }
@@ -749,14 +888,11 @@
         }
 
         function generateShareGrid() {
-            // guessHistory contains objects with { colours: [...], correct: bool }
             let grid = '';
             guessHistory.forEach((guess, index) => {
                 if (guess.correct) {
-                    // Show 4 of the same colour
                     grid += guess.colours[0].repeat(4);
                 } else {
-                    // Show the mix of colours guessed
                     grid += guess.colours.join('');
                 }
                 if (index < guessHistory.length - 1) grid += '\n';
@@ -773,17 +909,7 @@
         }
 
         // ===== GAME LOGIC =====
-        function getTodayPuzzle() {
-            const today = getTodayString();
-            return puzzles.find(p => p.date === today);
-        }
-
         function initGame(puzzle) {
-            if (!validatePuzzle(puzzle)) {
-                alert('Invalid puzzle data!');
-                return;
-            }
-
             currentPuzzle = puzzle;
             remainingWords = shuffle(puzzle.categories.flatMap(c => c.words));
             selectedWords = [];
@@ -797,6 +923,7 @@
             renderGrid();
             renderMistakes();
             renderSolvedCategories();
+            loadingEl.classList.add('hidden');
             gameEndEl.classList.add('hidden');
             controlsEl.classList.remove('hidden');
             gameAreaEl.classList.remove('hidden');
@@ -806,11 +933,11 @@
         function showAlreadyPlayed() {
             const result = getTodayResult();
 
+            loadingEl.classList.add('hidden');
             gameAreaEl.classList.add('hidden');
             gameEndEl.classList.remove('hidden');
             alreadyPlayedEl.classList.remove('hidden');
 
-            // Show their result
             if (result.won) {
                 endTitleEl.textContent = 'Brilliant!';
                 endMessageEl.textContent = `You solved it with ${4 - result.mistakes} mistakes remaining.`;
@@ -819,16 +946,15 @@
                 endMessageEl.textContent = 'You ran out of guesses.';
             }
 
-            // Reconstruct share grid from saved history
             guessHistory = result.guessHistory || [];
             shareGridEl.textContent = generateShareGrid();
 
-            // Start countdown
             updateCountdown();
             setInterval(updateCountdown, 1000);
         }
 
         function showNoPuzzle() {
+            loadingEl.classList.add('hidden');
             gameAreaEl.classList.add('hidden');
             noPuzzleEl.classList.remove('hidden');
             puzzleDateEl.textContent = formatDateForDisplay(getTodayString());
@@ -873,14 +999,12 @@
         function handleSubmit() {
             if (selectedWords.length !== 4 || gameOver) return;
 
-            // Check if selection matches any unsolved category
             const matchedCategory = currentPuzzle.categories.find(cat => {
                 if (solvedCategories.includes(cat)) return false;
                 return cat.words.every(w => selectedWords.includes(w)) &&
                        selectedWords.every(w => cat.words.includes(w));
             });
 
-            // Record this guess for share grid
             const guessColours = selectedWords.map(word => {
                 const cat = currentPuzzle.categories.find(c => c.words.includes(word));
                 return getColourEmoji(cat.colour);
@@ -913,7 +1037,6 @@
             mistakes++;
             renderMistakes();
 
-            // Shake animation
             const tiles = document.querySelectorAll('.tile.selected');
             tiles.forEach(tile => {
                 tile.classList.add('shake');
@@ -939,7 +1062,6 @@
         function renderSolvedCategories() {
             solvedCategoriesEl.innerHTML = '';
 
-            // Sort by difficulty order
             const order = ['green', 'yellow', 'orange', 'purple'];
             const sorted = [...solvedCategories].sort((a, b) =>
                 order.indexOf(a.colour) - order.indexOf(b.colour)
@@ -977,16 +1099,13 @@
             endTitleEl.textContent = 'Brilliant!';
             endMessageEl.textContent = `You solved it with ${4 - mistakes} mistakes remaining.`;
 
-            // Generate share grid
             shareGridEl.textContent = generateShareGrid();
 
             gameEndEl.classList.remove('hidden');
 
-            // Start countdown
             updateCountdown();
             setInterval(updateCountdown, 1000);
 
-            // Celebration confetti
             createConfetti();
         }
 
@@ -996,7 +1115,6 @@
             const stats = getStats();
             const today = getTodayString();
 
-            // Add remaining categories to guess history (revealed)
             const order = ['green', 'yellow', 'orange', 'purple'];
             const unsolved = currentPuzzle.categories
                 .filter(cat => !solvedCategories.includes(cat))
@@ -1017,7 +1135,6 @@
             saveStats(stats);
             updateStatsDisplay();
 
-            // Reveal all categories
             currentPuzzle.categories.forEach(cat => {
                 if (!solvedCategories.includes(cat)) {
                     solvedCategories.push(cat);
@@ -1031,12 +1148,10 @@
             endTitleEl.textContent = 'Better luck tomorrow!';
             endMessageEl.textContent = 'The answers have been revealed above.';
 
-            // Generate share grid
             shareGridEl.textContent = generateShareGrid();
 
             gameEndEl.classList.remove('hidden');
 
-            // Start countdown
             updateCountdown();
             setInterval(updateCountdown, 1000);
         }
@@ -1076,7 +1191,6 @@
                     shareBtn.classList.remove('copied');
                 }, 2000);
             } catch (err) {
-                // Fallback for older browsers
                 const textarea = document.createElement('textarea');
                 textarea.value = text;
                 document.body.appendChild(textarea);
@@ -1115,35 +1229,29 @@
         });
 
         // ===== INIT =====
-        function init() {
-            // Show how to play on first visit
+        async function init() {
             if (!hasSeenHowToPlay()) {
                 howToPlayModal.classList.remove('hidden');
             }
 
             updateStatsDisplay();
+            puzzleDateEl.textContent = formatDateForDisplay(getTodayString());
 
-            // Check if there's a puzzle for today
-            const todayPuzzle = getTodayPuzzle();
+            // Fetch puzzles from Google Sheet
+            const puzzles = await fetchPuzzles();
+            const today = getTodayString();
+            const todayPuzzle = puzzles.find(p => p.date === today);
 
             if (!todayPuzzle) {
                 showNoPuzzle();
                 return;
             }
 
-            // Check if already played today
             if (hasPlayedToday()) {
                 showAlreadyPlayed();
                 return;
             }
 
-            // Validate puzzle
-            if (!validatePuzzle(todayPuzzle)) {
-                showNoPuzzle();
-                return;
-            }
-
-            // Start game
             initGame(todayPuzzle);
         }
 
