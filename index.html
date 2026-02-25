@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections - British Edition</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+        }
+
+        .header .subtitle {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .header .puzzle-date {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 8px;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+
+        .stats-bar strong {
+            color: #1a1a2e;
+        }
+
+        /* Mistakes indicator */
+        .mistakes {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mistake-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            transition: background 0.3s ease;
+        }
+
+        .mistake-dot.used {
+            background: #374151;
+        }
+
+        /* Solved categories */
+        .solved-categories {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .solved-category {
+            padding: 16px 20px;
+            border-radius: 8px;
+            text-align: center;
+            animation: slideDown 0.4s ease;
+        }
+
+        .solved-category.green { background: #6aaa64; }
+        .solved-category.yellow { background: #c9b458; }
+        .solved-category.orange { background: #e07000; }
+        .solved-category.purple { background: #8b5cf6; }
+
+        .solved-category .category-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .solved-category .category-words {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.9);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+
+        .tile {
+            aspect-ratio: 1.5;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 4px;
+            word-break: break-word;
+        }
+
+        .tile:hover {
+            background: #d1d5db;
+        }
+
+        .tile.selected {
+            background: #374151;
+            color: white;
+        }
+
+        .tile.shake {
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .btn-primary {
+            background: #1a1a2e;
+            color: white;
+            border-color: #1a1a2e;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #2d2d44;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #1a1a2e;
+            border-color: #1a1a2e;
+        }
+
+        .btn-secondary:hover {
+            background: #f3f4f6;
+        }
+
+        /* Game end */
+        .game-end {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .game-end h2 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: #1a1a2e;
+        }
+
+        .game-end p {
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .game-end .next-puzzle-info {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 16px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Share section */
+        .share-section {
+            background: #f3f4f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .share-section h3 {
+            font-size: 0.9rem;
+            color: #374151;
+            margin-bottom: 12px;
+        }
+
+        .share-grid {
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
+            font-size: 1.5rem;
+            line-height: 1.4;
+            margin-bottom: 16px;
+            letter-spacing: 2px;
+        }
+
+        .share-btn {
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .share-btn:hover {
+            background: #2d2d44;
+        }
+
+        .share-btn.copied {
+            background: #6aaa64;
+        }
+
+        /* Already played state */
+        .already-played {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .already-played h2 {
+            font-size: 1.5rem;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+        }
+
+        .already-played p {
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+
+        .countdown {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* No puzzle state */
+        .no-puzzle {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .no-puzzle h2 {
+            font-size: 1.5rem;
+            color: #1a1a2e;
+            margin-bottom: 12px;
+        }
+
+        .no-puzzle p {
+            color: #6b7280;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+
+        .footer a {
+            color: #6b7280;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .modal h2 {
+            font-size: 1.25rem;
+            margin-bottom: 16px;
+            color: #1a1a2e;
+        }
+
+        .modal p {
+            color: #6b7280;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .colour-key {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .colour-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .colour-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .colour-dot.green { background: #6aaa64; }
+        .colour-dot.yellow { background: #c9b458; }
+        .colour-dot.orange { background: #e07000; }
+        .colour-dot.purple { background: #8b5cf6; }
+
+        /* Celebration */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 999;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Connections</h1>
+            <p class="subtitle">British Edition</p>
+            <p class="puzzle-date" id="puzzleDate"></p>
+        </header>
+
+        <div class="stats-bar">
+            <span>Streak: <strong id="streakCount">0</strong> 🔥</span>
+            <span>Played: <strong id="playedCount">0</strong></span>
+        </div>
+
+        <!-- No puzzle for today -->
+        <div class="no-puzzle hidden" id="noPuzzle">
+            <h2>No Puzzle Today</h2>
+            <p>Check back tomorrow for a new puzzle!</p>
+        </div>
+
+        <!-- Already played today -->
+        <div class="already-played hidden" id="alreadyPlayed">
+            <h2>You've Already Played Today!</h2>
+            <p>Come back tomorrow for a new puzzle.</p>
+            <div class="countdown" id="countdown"></div>
+            <p style="margin-top: 8px; font-size: 0.85rem;">until next puzzle</p>
+        </div>
+
+        <!-- Game area -->
+        <div id="gameArea">
+            <div class="mistakes" id="mistakes">
+                <div class="mistake-dot"></div>
+                <div class="mistake-dot"></div>
+                <div class="mistake-dot"></div>
+                <div class="mistake-dot"></div>
+            </div>
+
+            <div class="solved-categories" id="solvedCategories"></div>
+
+            <div class="grid" id="grid"></div>
+
+            <div class="controls" id="controls">
+                <button class="btn btn-secondary" id="shuffleBtn">Shuffle</button>
+                <button class="btn btn-primary" id="submitBtn" disabled>Submit</button>
+            </div>
+        </div>
+
+        <!-- Game end -->
+        <div class="game-end hidden" id="gameEnd">
+            <h2 id="endTitle"></h2>
+            <p id="endMessage"></p>
+
+            <div class="share-section" id="shareSection">
+                <h3>Share your result</h3>
+                <div class="share-grid" id="shareGrid"></div>
+                <button class="share-btn" id="shareBtn">Copy to Clipboard</button>
+            </div>
+
+            <p class="next-puzzle-info">Next puzzle in <span id="nextPuzzleCountdown"></span></p>
+        </div>
+
+        <footer class="footer">
+            <a href="#" id="howToPlayLink">How to Play</a> ·
+            <a href="/">London Crawling</a>
+        </footer>
+    </div>
+
+    <!-- How to Play Modal -->
+    <div class="modal-overlay hidden" id="howToPlayModal">
+        <div class="modal">
+            <h2>How to Play</h2>
+            <p>Find groups of four items that share something in common.</p>
+            <p>Select four items and tap <strong>Submit</strong> to check if your guess is correct.</p>
+            <p>Find all four groups without making 4 mistakes to win!</p>
+            <p><strong>New puzzle every day at midnight.</strong></p>
+            <div class="colour-key">
+                <div class="colour-item">
+                    <div class="colour-dot green"></div>
+                    <span>Easiest</span>
+                </div>
+                <div class="colour-item">
+                    <div class="colour-dot yellow"></div>
+                    <span>Easy</span>
+                </div>
+                <div class="colour-item">
+                    <div class="colour-dot orange"></div>
+                    <span>Tricky</span>
+                </div>
+                <div class="colour-item">
+                    <div class="colour-dot purple"></div>
+                    <span>Hardest</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" id="closeModalBtn">Got it!</button>
+        </div>
+    </div>
+
+    <!-- Celebration container -->
+    <div class="celebration" id="celebration"></div>
+
+    <script>
+        // ===== PUZZLE DATA =====
+        // Each puzzle has a date (YYYY-MM-DD) - only that puzzle shows on that day
+        const puzzles = [
+            {
+                date: "2026-02-25",
+                categories: [
+                    { name: "___ United (English Football)", colour: "green", words: ["LEEDS", "MANCHESTER", "NEWCASTLE", "SHEFFIELD"] },
+                    { name: "Great ___", colour: "yellow", words: ["BRITAIN", "FIRE", "WALL", "DANE"] },
+                    { name: "London Underground Lines", colour: "orange", words: ["CENTRAL", "JUBILEE", "NORTHERN", "BAKERLOO"] },
+                    { name: "Recent UK PM Surnames", colour: "purple", words: ["MAJOR", "BLAIR", "BROWN", "MAY"] }
+                ]
+            },
+            {
+                date: "2026-02-26",
+                categories: [
+                    { name: "London Boroughs", colour: "green", words: ["CAMDEN", "HACKNEY", "LAMBETH", "BRENT"] },
+                    { name: "___ Bridge (UK Bridges)", colour: "yellow", words: ["TOWER", "CLIFTON", "FORTH", "HUMBER"] },
+                    { name: "Home Counties", colour: "orange", words: ["KENT", "ESSEX", "SURREY", "BUCKS"] },
+                    { name: "Scottish Cities", colour: "purple", words: ["EDINBURGH", "GLASGOW", "DUNDEE", "ABERDEEN"] }
+                ]
+            },
+            {
+                date: "2026-02-27",
+                categories: [
+                    { name: "BBC TV Channels", colour: "green", words: ["ONE", "TWO", "THREE", "FOUR"] },
+                    { name: "Cadbury Chocolate Bars", colour: "yellow", words: ["TWIRL", "WISPA", "BOOST", "FLAKE"] },
+                    { name: "British Slang for Money", colour: "orange", words: ["QUID", "BOB", "TENNER", "FIVER"] },
+                    { name: "Beatles' First Names", colour: "purple", words: ["JOHN", "PAUL", "GEORGE", "RINGO"] }
+                ]
+            },
+            {
+                date: "2026-02-28",
+                categories: [
+                    { name: "Commonwealth Capital Cities", colour: "green", words: ["CANBERRA", "OTTAWA", "WELLINGTON", "DELHI"] },
+                    { name: "British Biscuits", colour: "yellow", words: ["DIGESTIVE", "HOBNOB", "BOURBON", "CUSTARD"] },
+                    { name: "___ Minister (UK Government)", colour: "orange", words: ["PRIME", "FOREIGN", "HOME", "DEFENCE"] },
+                    { name: "Summer Olympic Host Cities", colour: "purple", words: ["LONDON", "PARIS", "TOKYO", "BEIJING"] }
+                ]
+            },
+            {
+                date: "2026-03-01",
+                categories: [
+                    { name: "London Airports", colour: "green", words: ["HEATHROW", "GATWICK", "STANSTED", "LUTON"] },
+                    { name: "Oxford Colleges", colour: "yellow", words: ["BALLIOL", "MAGDALEN", "EXETER", "KEBLE"] },
+                    { name: "British Newspapers", colour: "orange", words: ["GUARDIAN", "TIMES", "TELEGRAPH", "MIRROR"] },
+                    { name: "UK Political Parties", colour: "purple", words: ["LABOUR", "TORY", "LIBERAL", "GREEN"] }
+                ]
+            }
+            // Add more puzzles here with their dates
+        ];
+
+        // ===== GAME STATE =====
+        let currentPuzzle = null;
+        let remainingWords = [];
+        let selectedWords = [];
+        let solvedCategories = [];
+        let guessHistory = []; // Track order of guesses for share grid
+        let mistakes = 0;
+        let gameOver = false;
+
+        // ===== DOM ELEMENTS =====
+        const gameAreaEl = document.getElementById('gameArea');
+        const gridEl = document.getElementById('grid');
+        const submitBtn = document.getElementById('submitBtn');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const mistakesEl = document.getElementById('mistakes');
+        const solvedCategoriesEl = document.getElementById('solvedCategories');
+        const gameEndEl = document.getElementById('gameEnd');
+        const controlsEl = document.getElementById('controls');
+        const endTitleEl = document.getElementById('endTitle');
+        const endMessageEl = document.getElementById('endMessage');
+        const puzzleDateEl = document.getElementById('puzzleDate');
+        const howToPlayModal = document.getElementById('howToPlayModal');
+        const howToPlayLink = document.getElementById('howToPlayLink');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const celebrationEl = document.getElementById('celebration');
+        const streakCountEl = document.getElementById('streakCount');
+        const playedCountEl = document.getElementById('playedCount');
+        const noPuzzleEl = document.getElementById('noPuzzle');
+        const alreadyPlayedEl = document.getElementById('alreadyPlayed');
+        const countdownEl = document.getElementById('countdown');
+        const shareGridEl = document.getElementById('shareGrid');
+        const shareSectionEl = document.getElementById('shareSection');
+        const shareBtn = document.getElementById('shareBtn');
+        const nextPuzzleCountdownEl = document.getElementById('nextPuzzleCountdown');
+
+        // ===== UTILITY FUNCTIONS =====
+        function getTodayString() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDateForDisplay(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-GB', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        function getTimeUntilMidnight() {
+            const now = new Date();
+            const midnight = new Date(now);
+            midnight.setHours(24, 0, 0, 0);
+            return midnight - now;
+        }
+
+        function formatCountdown(ms) {
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function shuffle(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function validatePuzzle(puzzle) {
+            const allWords = puzzle.categories.flatMap(c => c.words);
+            const uniqueWords = new Set(allWords);
+            if (allWords.length !== 16) {
+                console.error(`Puzzle for ${puzzle.date} does not have exactly 16 words`);
+                return false;
+            }
+            if (uniqueWords.size !== 16) {
+                console.error(`Puzzle for ${puzzle.date} has duplicate words`);
+                return false;
+            }
+            return true;
+        }
+
+        // ===== LOCAL STORAGE =====
+        function getStats() {
+            const stats = localStorage.getItem('connections_stats_v2');
+            return stats ? JSON.parse(stats) : {
+                played: {}, // { "2026-02-25": { won: true, mistakes: 2, guessHistory: [...] } }
+                streak: 0,
+                lastPlayedDate: null
+            };
+        }
+
+        function saveStats(stats) {
+            localStorage.setItem('connections_stats_v2', JSON.stringify(stats));
+        }
+
+        function updateStatsDisplay() {
+            const stats = getStats();
+            streakCountEl.textContent = stats.streak;
+            playedCountEl.textContent = Object.keys(stats.played).length;
+        }
+
+        function hasPlayedToday() {
+            const stats = getStats();
+            const today = getTodayString();
+            return stats.played[today] !== undefined;
+        }
+
+        function getTodayResult() {
+            const stats = getStats();
+            const today = getTodayString();
+            return stats.played[today];
+        }
+
+        function calculateStreak(stats, today, won) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+            if (won) {
+                // If played and won yesterday, increment streak
+                if (stats.lastPlayedDate === yesterdayStr && stats.played[yesterdayStr]?.won) {
+                    return stats.streak + 1;
+                }
+                // If this is first play or gap in days, start new streak
+                return 1;
+            } else {
+                // Lost - streak resets
+                return 0;
+            }
+        }
+
+        function hasSeenHowToPlay() {
+            return localStorage.getItem('connections_seen_how_to_play') === 'true';
+        }
+
+        function markHowToPlaySeen() {
+            localStorage.setItem('connections_seen_how_to_play', 'true');
+        }
+
+        // ===== SHARE FUNCTIONALITY =====
+        function getColourEmoji(colour) {
+            const emojis = {
+                green: '🟩',
+                yellow: '🟨',
+                orange: '🟧',
+                purple: '🟪'
+            };
+            return emojis[colour] || '⬜';
+        }
+
+        function generateShareGrid() {
+            // guessHistory contains objects with { colours: [...], correct: bool }
+            let grid = '';
+            guessHistory.forEach((guess, index) => {
+                if (guess.correct) {
+                    // Show 4 of the same colour
+                    grid += guess.colours[0].repeat(4);
+                } else {
+                    // Show the mix of colours guessed
+                    grid += guess.colours.join('');
+                }
+                if (index < guessHistory.length - 1) grid += '\n';
+            });
+            return grid;
+        }
+
+        function generateShareText() {
+            const today = getTodayString();
+            const result = getTodayResult();
+            const status = result.won ? `Solved with ${4 - result.mistakes} mistakes remaining` : 'Better luck tomorrow!';
+
+            return `Connections - British Edition\n${formatDateForDisplay(today)}\n\n${generateShareGrid()}\n\n${status}\n\nPlay at: ${window.location.href}`;
+        }
+
+        // ===== GAME LOGIC =====
+        function getTodayPuzzle() {
+            const today = getTodayString();
+            return puzzles.find(p => p.date === today);
+        }
+
+        function initGame(puzzle) {
+            if (!validatePuzzle(puzzle)) {
+                alert('Invalid puzzle data!');
+                return;
+            }
+
+            currentPuzzle = puzzle;
+            remainingWords = shuffle(puzzle.categories.flatMap(c => c.words));
+            selectedWords = [];
+            solvedCategories = [];
+            guessHistory = [];
+            mistakes = 0;
+            gameOver = false;
+
+            puzzleDateEl.textContent = formatDateForDisplay(puzzle.date);
+            updateStatsDisplay();
+            renderGrid();
+            renderMistakes();
+            renderSolvedCategories();
+            gameEndEl.classList.add('hidden');
+            controlsEl.classList.remove('hidden');
+            gameAreaEl.classList.remove('hidden');
+            submitBtn.disabled = true;
+        }
+
+        function showAlreadyPlayed() {
+            const result = getTodayResult();
+
+            gameAreaEl.classList.add('hidden');
+            gameEndEl.classList.remove('hidden');
+            alreadyPlayedEl.classList.remove('hidden');
+
+            // Show their result
+            if (result.won) {
+                endTitleEl.textContent = 'Brilliant!';
+                endMessageEl.textContent = `You solved it with ${4 - result.mistakes} mistakes remaining.`;
+            } else {
+                endTitleEl.textContent = 'Better luck tomorrow!';
+                endMessageEl.textContent = 'You ran out of guesses.';
+            }
+
+            // Reconstruct share grid from saved history
+            guessHistory = result.guessHistory || [];
+            shareGridEl.textContent = generateShareGrid();
+
+            // Start countdown
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+
+        function showNoPuzzle() {
+            gameAreaEl.classList.add('hidden');
+            noPuzzleEl.classList.remove('hidden');
+            puzzleDateEl.textContent = formatDateForDisplay(getTodayString());
+        }
+
+        function updateCountdown() {
+            const ms = getTimeUntilMidnight();
+            countdownEl.textContent = formatCountdown(ms);
+            if (nextPuzzleCountdownEl) {
+                nextPuzzleCountdownEl.textContent = formatCountdown(ms);
+            }
+        }
+
+        function renderGrid() {
+            gridEl.innerHTML = '';
+            remainingWords.forEach(word => {
+                const tile = document.createElement('button');
+                tile.className = 'tile';
+                tile.textContent = word;
+                tile.dataset.word = word;
+                if (selectedWords.includes(word)) {
+                    tile.classList.add('selected');
+                }
+                tile.addEventListener('click', () => handleTileClick(word));
+                gridEl.appendChild(tile);
+            });
+        }
+
+        function handleTileClick(word) {
+            if (gameOver) return;
+
+            if (selectedWords.includes(word)) {
+                selectedWords = selectedWords.filter(w => w !== word);
+            } else if (selectedWords.length < 4) {
+                selectedWords.push(word);
+            }
+
+            renderGrid();
+            submitBtn.disabled = selectedWords.length !== 4;
+        }
+
+        function handleSubmit() {
+            if (selectedWords.length !== 4 || gameOver) return;
+
+            // Check if selection matches any unsolved category
+            const matchedCategory = currentPuzzle.categories.find(cat => {
+                if (solvedCategories.includes(cat)) return false;
+                return cat.words.every(w => selectedWords.includes(w)) &&
+                       selectedWords.every(w => cat.words.includes(w));
+            });
+
+            // Record this guess for share grid
+            const guessColours = selectedWords.map(word => {
+                const cat = currentPuzzle.categories.find(c => c.words.includes(word));
+                return getColourEmoji(cat.colour);
+            });
+
+            if (matchedCategory) {
+                guessHistory.push({ colours: [getColourEmoji(matchedCategory.colour)], correct: true });
+                solveCategory(matchedCategory);
+            } else {
+                guessHistory.push({ colours: guessColours, correct: false });
+                handleWrongGuess();
+            }
+        }
+
+        function solveCategory(category) {
+            solvedCategories.push(category);
+            remainingWords = remainingWords.filter(w => !category.words.includes(w));
+            selectedWords = [];
+
+            renderSolvedCategories();
+            renderGrid();
+            submitBtn.disabled = true;
+
+            if (solvedCategories.length === 4) {
+                handleWin();
+            }
+        }
+
+        function handleWrongGuess() {
+            mistakes++;
+            renderMistakes();
+
+            // Shake animation
+            const tiles = document.querySelectorAll('.tile.selected');
+            tiles.forEach(tile => {
+                tile.classList.add('shake');
+                setTimeout(() => tile.classList.remove('shake'), 500);
+            });
+
+            selectedWords = [];
+            renderGrid();
+            submitBtn.disabled = true;
+
+            if (mistakes >= 4) {
+                handleLoss();
+            }
+        }
+
+        function renderMistakes() {
+            const dots = mistakesEl.querySelectorAll('.mistake-dot');
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('used', i < mistakes);
+            });
+        }
+
+        function renderSolvedCategories() {
+            solvedCategoriesEl.innerHTML = '';
+
+            // Sort by difficulty order
+            const order = ['green', 'yellow', 'orange', 'purple'];
+            const sorted = [...solvedCategories].sort((a, b) =>
+                order.indexOf(a.colour) - order.indexOf(b.colour)
+            );
+
+            sorted.forEach(cat => {
+                const div = document.createElement('div');
+                div.className = `solved-category ${cat.colour}`;
+                div.innerHTML = `
+                    <div class="category-name">${cat.name}</div>
+                    <div class="category-words">${cat.words.join(', ')}</div>
+                `;
+                solvedCategoriesEl.appendChild(div);
+            });
+        }
+
+        function handleWin() {
+            gameOver = true;
+
+            const stats = getStats();
+            const today = getTodayString();
+
+            stats.played[today] = {
+                won: true,
+                mistakes: mistakes,
+                guessHistory: guessHistory
+            };
+            stats.streak = calculateStreak(stats, today, true);
+            stats.lastPlayedDate = today;
+
+            saveStats(stats);
+            updateStatsDisplay();
+
+            controlsEl.classList.add('hidden');
+            endTitleEl.textContent = 'Brilliant!';
+            endMessageEl.textContent = `You solved it with ${4 - mistakes} mistakes remaining.`;
+
+            // Generate share grid
+            shareGridEl.textContent = generateShareGrid();
+
+            gameEndEl.classList.remove('hidden');
+
+            // Start countdown
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+
+            // Celebration confetti
+            createConfetti();
+        }
+
+        function handleLoss() {
+            gameOver = true;
+
+            const stats = getStats();
+            const today = getTodayString();
+
+            // Add remaining categories to guess history (revealed)
+            const order = ['green', 'yellow', 'orange', 'purple'];
+            const unsolved = currentPuzzle.categories
+                .filter(cat => !solvedCategories.includes(cat))
+                .sort((a, b) => order.indexOf(a.colour) - order.indexOf(b.colour));
+
+            unsolved.forEach(cat => {
+                guessHistory.push({ colours: [getColourEmoji(cat.colour)], correct: true });
+            });
+
+            stats.played[today] = {
+                won: false,
+                mistakes: mistakes,
+                guessHistory: guessHistory
+            };
+            stats.streak = 0;
+            stats.lastPlayedDate = today;
+
+            saveStats(stats);
+            updateStatsDisplay();
+
+            // Reveal all categories
+            currentPuzzle.categories.forEach(cat => {
+                if (!solvedCategories.includes(cat)) {
+                    solvedCategories.push(cat);
+                }
+            });
+            renderSolvedCategories();
+            remainingWords = [];
+            renderGrid();
+
+            controlsEl.classList.add('hidden');
+            endTitleEl.textContent = 'Better luck tomorrow!';
+            endMessageEl.textContent = 'The answers have been revealed above.';
+
+            // Generate share grid
+            shareGridEl.textContent = generateShareGrid();
+
+            gameEndEl.classList.remove('hidden');
+
+            // Start countdown
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        }
+
+        function handleShuffle() {
+            remainingWords = shuffle(remainingWords);
+            renderGrid();
+        }
+
+        function createConfetti() {
+            const colours = ['#6aaa64', '#c9b458', '#e07000', '#8b5cf6', '#ff6b6b', '#4ecdc4'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.top = '-10px';
+                confetti.style.background = colours[Math.floor(Math.random() * colours.length)];
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                confetti.style.animationDuration = (2 + Math.random()) + 's';
+                celebrationEl.appendChild(confetti);
+            }
+            setTimeout(() => {
+                celebrationEl.innerHTML = '';
+            }, 4000);
+        }
+
+        async function handleShare() {
+            const text = generateShareText();
+
+            try {
+                await navigator.clipboard.writeText(text);
+                shareBtn.textContent = 'Copied!';
+                shareBtn.classList.add('copied');
+                setTimeout(() => {
+                    shareBtn.textContent = 'Copy to Clipboard';
+                    shareBtn.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                shareBtn.textContent = 'Copied!';
+                shareBtn.classList.add('copied');
+                setTimeout(() => {
+                    shareBtn.textContent = 'Copy to Clipboard';
+                    shareBtn.classList.remove('copied');
+                }, 2000);
+            }
+        }
+
+        // ===== EVENT LISTENERS =====
+        submitBtn.addEventListener('click', handleSubmit);
+        shuffleBtn.addEventListener('click', handleShuffle);
+        shareBtn.addEventListener('click', handleShare);
+
+        howToPlayLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            howToPlayModal.classList.remove('hidden');
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            howToPlayModal.classList.add('hidden');
+            markHowToPlaySeen();
+        });
+
+        howToPlayModal.addEventListener('click', (e) => {
+            if (e.target === howToPlayModal) {
+                howToPlayModal.classList.add('hidden');
+                markHowToPlaySeen();
+            }
+        });
+
+        // ===== INIT =====
+        function init() {
+            // Show how to play on first visit
+            if (!hasSeenHowToPlay()) {
+                howToPlayModal.classList.remove('hidden');
+            }
+
+            updateStatsDisplay();
+
+            // Check if there's a puzzle for today
+            const todayPuzzle = getTodayPuzzle();
+
+            if (!todayPuzzle) {
+                showNoPuzzle();
+                return;
+            }
+
+            // Check if already played today
+            if (hasPlayedToday()) {
+                showAlreadyPlayed();
+                return;
+            }
+
+            // Validate puzzle
+            if (!validatePuzzle(todayPuzzle)) {
+                showNoPuzzle();
+                return;
+            }
+
+            // Start game
+            initGame(todayPuzzle);
+        }
+
+        init();
+    </script>
+</body>
+</html>
