@@ -47,6 +47,13 @@
             margin-top: 8px;
         }
 
+        .header .written-by {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
         /* Stats bar */
         .stats-bar {
             display: flex;
@@ -102,7 +109,7 @@
             background: #374151;
         }
 
-        /* Solved categories */
+        /* Solved categories - order: yellow, green, blue, purple */
         .solved-categories {
             display: flex;
             flex-direction: column;
@@ -117,9 +124,9 @@
             animation: slideDown 0.4s ease;
         }
 
-        .solved-category.green { background: #6aaa64; }
         .solved-category.yellow { background: #c9b458; }
-        .solved-category.orange { background: #e07000; }
+        .solved-category.green { background: #6aaa64; }
+        .solved-category.blue { background: #4a90d9; }
         .solved-category.purple { background: #8b5cf6; }
 
         .solved-category .category-name {
@@ -426,9 +433,9 @@
             border-radius: 4px;
         }
 
-        .colour-dot.green { background: #6aaa64; }
         .colour-dot.yellow { background: #c9b458; }
-        .colour-dot.orange { background: #e07000; }
+        .colour-dot.green { background: #6aaa64; }
+        .colour-dot.blue { background: #4a90d9; }
         .colour-dot.purple { background: #8b5cf6; }
 
         /* Celebration */
@@ -464,6 +471,7 @@
             <h1>Connections</h1>
             <p class="subtitle">British Edition</p>
             <p class="puzzle-date" id="puzzleDate"></p>
+            <p class="written-by hidden" id="writtenBy"></p>
         </header>
 
         <div class="stats-bar">
@@ -540,15 +548,15 @@
             <p><strong>New puzzle every day at midnight.</strong></p>
             <div class="colour-key">
                 <div class="colour-item">
-                    <div class="colour-dot green"></div>
+                    <div class="colour-dot yellow"></div>
                     <span>Easiest</span>
                 </div>
                 <div class="colour-item">
-                    <div class="colour-dot yellow"></div>
+                    <div class="colour-dot green"></div>
                     <span>Easy</span>
                 </div>
                 <div class="colour-item">
-                    <div class="colour-dot orange"></div>
+                    <div class="colour-dot blue"></div>
                     <span>Tricky</span>
                 </div>
                 <div class="colour-item">
@@ -565,13 +573,7 @@
 
     <script>
         // ===== CONFIGURATION =====
-        // Replace this URL with your published Google Sheet CSV URL
-        // To get this URL:
-        // 1. Open your Google Sheet
-        // 2. File → Share → Publish to web
-        // 3. Select the sheet tab, choose CSV format
-        // 4. Click Publish and copy the URL
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/YOUR_SHEET_ID/pub?output=csv';
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRVce17rCXo1SJkPhMK0R1P4ytJAG5In25KcP66a5aNE4KEtg7u_0oQGuQzgL3-MiGUdI0_4BmQXGYK/pub?output=csv';
 
         // ===== GAME STATE =====
         let currentPuzzle = null;
@@ -595,6 +597,7 @@
         const endTitleEl = document.getElementById('endTitle');
         const endMessageEl = document.getElementById('endMessage');
         const puzzleDateEl = document.getElementById('puzzleDate');
+        const writtenByEl = document.getElementById('writtenBy');
         const howToPlayModal = document.getElementById('howToPlayModal');
         const howToPlayLink = document.getElementById('howToPlayLink');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -654,39 +657,39 @@
         // ===== CSV PARSING =====
         function parseCSV(csv) {
             const lines = csv.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
             const puzzles = [];
 
             for (let i = 1; i < lines.length; i++) {
                 const values = parseCSVLine(lines[i]);
-                if (values.length < 9) continue; // Skip incomplete rows
+                if (values.length < 9) continue;
 
                 const row = {};
                 headers.forEach((header, index) => {
                     row[header] = values[index]?.trim() || '';
                 });
 
-                // Skip empty rows
                 if (!row.date) continue;
 
-                // Parse the puzzle
+                // Parse the puzzle - order: yellow (easiest), green, blue, purple (hardest)
                 const puzzle = {
                     date: normalizeDate(row.date),
+                    writtenBy: row.written_by || row.writtenby || row.author || '',
                     categories: [
-                        {
-                            name: row.green_category || row.green,
-                            colour: 'green',
-                            words: parseWords(row.green_words || row.green_tiles)
-                        },
                         {
                             name: row.yellow_category || row.yellow,
                             colour: 'yellow',
                             words: parseWords(row.yellow_words || row.yellow_tiles)
                         },
                         {
-                            name: row.orange_category || row.orange,
-                            colour: 'orange',
-                            words: parseWords(row.orange_words || row.orange_tiles)
+                            name: row.green_category || row.green,
+                            colour: 'green',
+                            words: parseWords(row.green_words || row.green_tiles)
+                        },
+                        {
+                            name: row.blue_category || row.blue,
+                            colour: 'blue',
+                            words: parseWords(row.blue_words || row.blue_tiles)
                         },
                         {
                             name: row.purple_category || row.purple,
@@ -726,21 +729,16 @@
 
         function parseWords(wordsStr) {
             if (!wordsStr) return [];
-            // Split by comma, pipe, or semicolon
             return wordsStr.split(/[,|;]/).map(w => w.trim().toUpperCase()).filter(w => w);
         }
 
         function normalizeDate(dateStr) {
-            // Handle various date formats
-            // DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, etc.
             if (!dateStr) return '';
 
-            // Already in YYYY-MM-DD format
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
                 return dateStr;
             }
 
-            // Try DD/MM/YYYY (UK format)
             if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
                 const parts = dateStr.split('/');
                 const day = parts[0].padStart(2, '0');
@@ -749,7 +747,6 @@
                 return `${year}-${month}-${day}`;
             }
 
-            // Try parsing with Date object as fallback
             try {
                 const date = new Date(dateStr);
                 if (!isNaN(date.getTime())) {
@@ -780,12 +777,6 @@
         // ===== FETCH PUZZLES =====
         async function fetchPuzzles() {
             try {
-                // Check if we have a valid sheet URL configured
-                if (SHEET_URL.includes('YOUR_SHEET_ID')) {
-                    console.log('No Google Sheet configured, using fallback puzzles');
-                    return getFallbackPuzzles();
-                }
-
                 const response = await fetch(SHEET_URL);
                 if (!response.ok) {
                     throw new Error('Failed to fetch puzzles');
@@ -807,14 +798,14 @@
         }
 
         function getFallbackPuzzles() {
-            // Fallback puzzles if Google Sheet is not configured or fails
             return [
                 {
                     date: getTodayString(),
+                    writtenBy: '',
                     categories: [
-                        { name: "___ United (English Football)", colour: "green", words: ["LEEDS", "MANCHESTER", "NEWCASTLE", "SHEFFIELD"] },
                         { name: "Great ___", colour: "yellow", words: ["BRITAIN", "FIRE", "WALL", "DANE"] },
-                        { name: "London Underground Lines", colour: "orange", words: ["CENTRAL", "JUBILEE", "NORTHERN", "BAKERLOO"] },
+                        { name: "___ United (English Football)", colour: "green", words: ["LEEDS", "MANCHESTER", "NEWCASTLE", "SHEFFIELD"] },
+                        { name: "London Underground Lines", colour: "blue", words: ["CENTRAL", "JUBILEE", "NORTHERN", "BAKERLOO"] },
                         { name: "Recent UK PM Surnames", colour: "purple", words: ["MAJOR", "BLAIR", "BROWN", "MAY"] }
                     ]
                 }
@@ -879,9 +870,9 @@
         // ===== SHARE FUNCTIONALITY =====
         function getColourEmoji(colour) {
             const emojis = {
-                green: '🟩',
                 yellow: '🟨',
-                orange: '🟧',
+                green: '🟩',
+                blue: '🟦',
                 purple: '🟪'
             };
             return emojis[colour] || '⬜';
@@ -904,8 +895,9 @@
             const today = getTodayString();
             const result = getTodayResult();
             const status = result.won ? `Solved with ${4 - result.mistakes} mistakes remaining` : 'Better luck tomorrow!';
+            const author = currentPuzzle?.writtenBy ? `\nWritten by: ${currentPuzzle.writtenBy}` : '';
 
-            return `Connections - British Edition\n${formatDateForDisplay(today)}\n\n${generateShareGrid()}\n\n${status}\n\nPlay at: ${window.location.href}`;
+            return `Connections - British Edition\n${formatDateForDisplay(today)}${author}\n\n${generateShareGrid()}\n\n${status}\n\nPlay at: ${window.location.href}`;
         }
 
         // ===== GAME LOGIC =====
@@ -919,6 +911,15 @@
             gameOver = false;
 
             puzzleDateEl.textContent = formatDateForDisplay(puzzle.date);
+
+            // Show author if available
+            if (puzzle.writtenBy) {
+                writtenByEl.textContent = `Written by ${puzzle.writtenBy}`;
+                writtenByEl.classList.remove('hidden');
+            } else {
+                writtenByEl.classList.add('hidden');
+            }
+
             updateStatsDisplay();
             renderGrid();
             renderMistakes();
@@ -1062,7 +1063,8 @@
         function renderSolvedCategories() {
             solvedCategoriesEl.innerHTML = '';
 
-            const order = ['green', 'yellow', 'orange', 'purple'];
+            // Difficulty order: yellow (easiest), green, blue, purple (hardest)
+            const order = ['yellow', 'green', 'blue', 'purple'];
             const sorted = [...solvedCategories].sort((a, b) =>
                 order.indexOf(a.colour) - order.indexOf(b.colour)
             );
@@ -1115,7 +1117,7 @@
             const stats = getStats();
             const today = getTodayString();
 
-            const order = ['green', 'yellow', 'orange', 'purple'];
+            const order = ['yellow', 'green', 'blue', 'purple'];
             const unsolved = currentPuzzle.categories
                 .filter(cat => !solvedCategories.includes(cat))
                 .sort((a, b) => order.indexOf(a.colour) - order.indexOf(b.colour));
@@ -1162,7 +1164,7 @@
         }
 
         function createConfetti() {
-            const colours = ['#6aaa64', '#c9b458', '#e07000', '#8b5cf6', '#ff6b6b', '#4ecdc4'];
+            const colours = ['#c9b458', '#6aaa64', '#4a90d9', '#8b5cf6', '#ff6b6b', '#4ecdc4'];
             for (let i = 0; i < 50; i++) {
                 const confetti = document.createElement('div');
                 confetti.className = 'confetti';
@@ -1237,7 +1239,6 @@
             updateStatsDisplay();
             puzzleDateEl.textContent = formatDateForDisplay(getTodayString());
 
-            // Fetch puzzles from Google Sheet
             const puzzles = await fetchPuzzles();
             const today = getTodayString();
             const todayPuzzle = puzzles.find(p => p.date === today);
