@@ -1271,7 +1271,7 @@
         // Supabase configuration
         const SUPABASE_URL = 'https://bwybtkrfgepsoeuvxvmf.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3eWJ0a3JmZ2Vwc29ldXZ4dm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjIzMzcsImV4cCI6MjA4NzYzODMzN30.aF5KTncfws-grjCkgwQD47fUSkTuJC6-gJMhB0JC0F4';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ===== STATE =====
         let allPuzzles = [];
@@ -1505,7 +1505,7 @@
                 const today = getTodayString();
 
                 // Get all leagues the player is in
-                const { data: memberships } = await supabase
+                const { data: memberships } = await db
                     .from('league_memberships')
                     .select('league_id, leagues(id, name)')
                     .eq('player_uuid', playerUUID);
@@ -1517,12 +1517,12 @@
 
                 // Get stats for each league
                 const leagues = await Promise.all(memberships.map(async m => {
-                    const { count: totalMembers } = await supabase
+                    const { count: totalMembers } = await db
                         .from('league_memberships')
                         .select('*', { count: 'exact', head: true })
                         .eq('league_id', m.league_id);
 
-                    const { count: playedToday } = await supabase
+                    const { count: playedToday } = await db
                         .from('daily_scores')
                         .select('*', { count: 'exact', head: true })
                         .eq('league_id', m.league_id)
@@ -1577,7 +1577,7 @@
                 // Generate a short ID
                 const id = crypto.randomUUID().slice(0, 8);
 
-                const { error } = await supabase
+                const { error } = await db
                     .from('leagues')
                     .insert({ id, name: name.trim() });
 
@@ -1602,7 +1602,7 @@
             if (!playerName) {
                 // Need to prompt for name first
                 pendingLeagueId = leagueId;
-                const { data: league } = await supabase
+                const { data: league } = await db
                     .from('leagues')
                     .select('*')
                     .eq('id', leagueId)
@@ -1614,12 +1614,12 @@
 
             try {
                 // Upsert player
-                await supabase
+                await db
                     .from('players')
                     .upsert({ uuid: playerUUID, display_name: playerName.trim() }, { onConflict: 'uuid' });
 
                 // Add membership if not exists
-                await supabase
+                await db
                     .from('league_memberships')
                     .upsert({ player_uuid: playerUUID, league_id: leagueId }, { onConflict: 'player_uuid,league_id', ignoreDuplicates: true });
 
@@ -1637,7 +1637,7 @@
             try {
                 // Insert/update score for each league the player is in
                 for (const league of playerLeagues) {
-                    await supabase
+                    await db
                         .from('daily_scores')
                         .upsert(
                             { player_uuid: playerUUID, league_id: league.id, date: currentDate, mistakes: mistakeCount },
@@ -1656,13 +1656,13 @@
             for (const league of playerLeagues) {
                 try {
                     // Get all members with their player info
-                    const { data: memberships } = await supabase
+                    const { data: memberships } = await db
                         .from('league_memberships')
                         .select('player_uuid, players(uuid, display_name)')
                         .eq('league_id', league.id);
 
                     // Get scores for this date
-                    const { data: scores } = await supabase
+                    const { data: scores } = await db
                         .from('daily_scores')
                         .select('*')
                         .eq('league_id', league.id)
@@ -1755,7 +1755,7 @@
 
                 // Check if already a member
                 try {
-                    const { data } = await supabase
+                    const { data } = await db
                         .from('league_memberships')
                         .select('*')
                         .eq('league_id', leagueId)
@@ -2381,7 +2381,7 @@
                     ensurePlayerUUID();
 
                     // Update player name in Supabase
-                    await supabase
+                    await db
                         .from('players')
                         .upsert({ uuid: playerUUID, display_name: name.trim() }, { onConflict: 'uuid' });
 
