@@ -1261,11 +1261,17 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // ===== CONFIGURATION =====
         const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRVce17rCXo1SJkPhMK0R1P4ytJAG5In25KcP66a5aNE4KEtg7u_0oQGuQzgL3-MiGUdI0_4BmQXGYK/pub?output=csv';
         const GRADIENT_CLASSES = ['gradient-1', 'gradient-2', 'gradient-3', 'gradient-4'];
         const SHARE_EMOJIS = ['🟩', '🟨', '🟧', '🟥']; // Green, Yellow, Amber, Red - UK Met Office style
+
+        // Supabase configuration
+        const SUPABASE_URL = 'https://bwybtkrfgepsoeuvxvmf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3eWJ0a3JmZ2Vwc29ldXZ4dm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjIzMzcsImV4cCI6MjA4NzYzODMzN30.aF5KTncfws-grjCkgwQD47fUSkTuJC6-gJMhB0JC0F4';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ===== STATE =====
         let allPuzzles = [];
@@ -1496,9 +1502,41 @@
         async function fetchPlayerLeagues() {
             if (!playerUUID) return [];
             try {
-                const res = await fetch(`/api/player/${playerUUID}/leagues`);
-                const data = await res.json();
-                playerLeagues = data.leagues || [];
+                const today = getTodayString();
+
+                // Get all leagues the player is in
+                const { data: memberships } = await supabase
+                    .from('league_memberships')
+                    .select('league_id, leagues(id, name)')
+                    .eq('player_uuid', playerUUID);
+
+                if (!memberships || memberships.length === 0) {
+                    playerLeagues = [];
+                    return [];
+                }
+
+                // Get stats for each league
+                const leagues = await Promise.all(memberships.map(async m => {
+                    const { count: totalMembers } = await supabase
+                        .from('league_memberships')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('league_id', m.league_id);
+
+                    const { count: playedToday } = await supabase
+                        .from('daily_scores')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('league_id', m.league_id)
+                        .eq('date', today);
+
+                    return {
+                        id: m.league_id,
+                        name: m.leagues?.name || 'Unknown',
+                        total_members: totalMembers || 0,
+                        played_today: playedToday || 0
+                    };
+                }));
+
+                playerLeagues = leagues;
                 return playerLeagues;
             } catch (error) {
                 console.error('Error fetching leagues:', error);
@@ -1536,21 +1574,23 @@
 
         async function createLeague(name) {
             try {
-                const res = await fetch('/api/leagues', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name })
-                });
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
+                // Generate a short ID
+                const id = crypto.randomUUID().slice(0, 8);
+
+                const { error } = await supabase
+                    .from('leagues')
+                    .insert({ id, name: name.trim() });
+
+                if (error) throw error;
 
                 // Auto-join the league we created
                 ensurePlayerUUID();
                 if (playerName) {
-                    await joinLeague(data.id);
+                    await joinLeague(id);
                 }
 
-                return data;
+                const url = `${window.location.origin}/league/${id}`;
+                return { id, name: name.trim(), url };
             } catch (error) {
                 console.error('Error creating league:', error);
                 throw error;
@@ -1562,21 +1602,26 @@
             if (!playerName) {
                 // Need to prompt for name first
                 pendingLeagueId = leagueId;
-                const leagueRes = await fetch(`/api/leagues/${leagueId}`);
-                const leagueData = await leagueRes.json();
-                joinLeagueName.textContent = leagueData.name;
+                const { data: league } = await supabase
+                    .from('leagues')
+                    .select('*')
+                    .eq('id', leagueId)
+                    .single();
+                joinLeagueName.textContent = league?.name || 'League';
                 openModal(joinLeagueModal);
                 return false;
             }
 
             try {
-                const res = await fetch(`/api/leagues/${leagueId}/join`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ uuid: playerUUID, displayName: playerName })
-                });
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
+                // Upsert player
+                await supabase
+                    .from('players')
+                    .upsert({ uuid: playerUUID, display_name: playerName.trim() }, { onConflict: 'uuid' });
+
+                // Add membership if not exists
+                await supabase
+                    .from('league_memberships')
+                    .upsert({ player_uuid: playerUUID, league_id: leagueId }, { onConflict: 'player_uuid,league_id', ignoreDuplicates: true });
 
                 await fetchPlayerLeagues();
                 return true;
@@ -1586,19 +1631,19 @@
             }
         }
 
-        async function submitScore(mistakes) {
+        async function submitScore(mistakeCount) {
             if (!playerUUID || playerLeagues.length === 0) return;
 
             try {
-                await fetch('/api/scores', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        uuid: playerUUID,
-                        date: currentDate,
-                        mistakes: mistakes
-                    })
-                });
+                // Insert/update score for each league the player is in
+                for (const league of playerLeagues) {
+                    await supabase
+                        .from('daily_scores')
+                        .upsert(
+                            { player_uuid: playerUUID, league_id: league.id, date: currentDate, mistakes: mistakeCount },
+                            { onConflict: 'player_uuid,league_id,date' }
+                        );
+                }
             } catch (error) {
                 console.error('Error submitting score:', error);
             }
@@ -1610,9 +1655,62 @@
             const leaderboards = [];
             for (const league of playerLeagues) {
                 try {
-                    const res = await fetch(`/api/leagues/${league.id}/leaderboard?date=${currentDate}`);
-                    const data = await res.json();
-                    leaderboards.push(data);
+                    // Get all members with their player info
+                    const { data: memberships } = await supabase
+                        .from('league_memberships')
+                        .select('player_uuid, players(uuid, display_name)')
+                        .eq('league_id', league.id);
+
+                    // Get scores for this date
+                    const { data: scores } = await supabase
+                        .from('daily_scores')
+                        .select('*')
+                        .eq('league_id', league.id)
+                        .eq('date', currentDate);
+
+                    // Build member list with scores
+                    const members = (memberships || []).map(m => {
+                        const score = (scores || []).find(s => s.player_uuid === m.player_uuid);
+                        return {
+                            uuid: m.player_uuid,
+                            display_name: m.players?.display_name || 'Unknown',
+                            mistakes: score?.mistakes ?? null,
+                            date: score?.date ?? null
+                        };
+                    });
+
+                    // Sort: played first (by mistakes), then not played (alphabetically)
+                    members.sort((a, b) => {
+                        if (a.mistakes !== null && b.mistakes !== null) {
+                            return a.mistakes - b.mistakes;
+                        }
+                        if (a.mistakes !== null) return -1;
+                        if (b.mistakes !== null) return 1;
+                        return a.display_name.localeCompare(b.display_name);
+                    });
+
+                    // Calculate ranks
+                    let currentRank = 0;
+                    let lastMistakes = null;
+                    let playedCount = 0;
+
+                    const leaderboard = members.map((member) => {
+                        if (member.mistakes !== null) {
+                            playedCount++;
+                            if (member.mistakes !== lastMistakes) {
+                                currentRank = playedCount;
+                                lastMistakes = member.mistakes;
+                            }
+                            return { ...member, rank: currentRank };
+                        }
+                        return { ...member, rank: null };
+                    });
+
+                    leaderboards.push({
+                        league: { id: league.id, name: league.name },
+                        date: currentDate,
+                        leaderboard
+                    });
                 } catch (error) {
                     console.error('Error fetching leaderboard:', error);
                 }
@@ -1657,15 +1755,20 @@
 
                 // Check if already a member
                 try {
-                    const res = await fetch(`/api/leagues/${leagueId}/membership/${playerUUID}`);
-                    const data = await res.json();
+                    const { data } = await supabase
+                        .from('league_memberships')
+                        .select('*')
+                        .eq('league_id', leagueId)
+                        .eq('player_uuid', playerUUID)
+                        .single();
 
-                    if (!data.isMember) {
+                    if (!data) {
                         // Need to join
                         await joinLeague(leagueId);
                     }
                 } catch (error) {
-                    console.error('Error checking membership:', error);
+                    // No membership found, try to join
+                    await joinLeague(leagueId);
                 }
 
                 // Clear the URL to avoid re-joining on refresh
@@ -2277,12 +2380,10 @@
                     setPlayerName(name);
                     ensurePlayerUUID();
 
-                    // Update player name on server
-                    await fetch(`/api/player/${playerUUID}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ displayName: name })
-                    });
+                    // Update player name in Supabase
+                    await supabase
+                        .from('players')
+                        .upsert({ uuid: playerUUID, display_name: name.trim() }, { onConflict: 'uuid' });
 
                     if (pendingLeagueId) {
                         if (pendingLeagueId.startsWith('CREATE:')) {
