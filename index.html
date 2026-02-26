@@ -2442,15 +2442,9 @@
                 }
             });
 
-            // Check for league URL and handle joining
-            await checkLeagueUrl();
-
             updateStatsDisplay();
 
-            // Render league widget
-            await renderLeagueWidget();
-
-            // Fetch and load puzzle
+            // Fetch and load puzzle FIRST (don't wait for Supabase)
             allPuzzles = await fetchPuzzles();
             const today = getTodayString();
             currentDate = today;
@@ -2484,6 +2478,16 @@
             renderGrid();
             renderMistakes();
             updateButtons();
+
+            // Load league features in background (don't block game)
+            setTimeout(async () => {
+                try {
+                    await checkLeagueUrl();
+                    await renderLeagueWidget();
+                } catch (e) {
+                    console.log('League features unavailable:', e);
+                }
+            }, 100);
         }
 
         init();
