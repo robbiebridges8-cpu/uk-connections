@@ -1651,6 +1651,42 @@
                 // If user just upgraded from anonymous to authenticated, or just signed in
                 if ((wasAnonymous || wasNull) && currentUser && !currentUser.is_anonymous) {
                     console.log('User is now authenticated');
+
+                    // Check for pending game state from magic link flow
+                    const pendingState = localStorage.getItem('pendingGameState');
+                    if (pendingState) {
+                        const state = JSON.parse(pendingState);
+                        console.log('Found pending game state:', state);
+
+                        // Migrate score from anonymous user to authenticated user
+                        if (state.anonymousUserId && state.anonymousUserId !== currentUser.id) {
+                            await migrateAnonymousScores(state.anonymousUserId, currentUser.id);
+                        }
+
+                        // Ensure the game result is in stats (belt and suspenders)
+                        if (state.date && state.completed) {
+                            const stats = getStats();
+                            if (!stats.played[state.date]) {
+                                stats.played[state.date] = {
+                                    won: state.won,
+                                    mistakes: state.mistakes,
+                                    guessHistory: state.guessHistory || []
+                                };
+                                saveStats(stats);
+                            }
+                        }
+
+                        localStorage.removeItem('pendingGameState');
+
+                        // Set flag to indicate we came from magic link with completed game
+                        window.restoringFromMagicLink = true;
+
+                        // Skip welcome modal, just show toast
+                        showToast('Signed in successfully!');
+                        sessionStorage.removeItem('pendingAuthAction');
+                        return;
+                    }
+
                     await handlePostAuthFlow();
                 }
             });
@@ -1663,10 +1699,37 @@
                 currentUser = session.user;
                 updateAuthUI();
 
-                // If authenticated and has pending action, handle it now
-                const hasPending = sessionStorage.getItem('pendingAuthAction');
-                if (!currentUser.is_anonymous && hasPending) {
-                    console.log('Authenticated user with pending action:', hasPending);
+                // Check for pending game state from magic link flow (may not trigger onAuthStateChange)
+                const pendingState = localStorage.getItem('pendingGameState');
+                if (!currentUser.is_anonymous && pendingState) {
+                    const state = JSON.parse(pendingState);
+                    console.log('Found pending game state on session init:', state);
+
+                    // Migrate score from anonymous user to authenticated user
+                    if (state.anonymousUserId && state.anonymousUserId !== currentUser.id) {
+                        await migrateAnonymousScores(state.anonymousUserId, currentUser.id);
+                    }
+
+                    // Ensure the game result is in stats
+                    if (state.date && state.completed) {
+                        const stats = getStats();
+                        if (!stats.played[state.date]) {
+                            stats.played[state.date] = {
+                                won: state.won,
+                                mistakes: state.mistakes,
+                                guessHistory: state.guessHistory || []
+                            };
+                            saveStats(stats);
+                        }
+                    }
+
+                    localStorage.removeItem('pendingGameState');
+                    window.restoringFromMagicLink = true;
+                    sessionStorage.removeItem('pendingAuthAction');
+                    showToast('Signed in successfully!');
+                } else if (!currentUser.is_anonymous && sessionStorage.getItem('pendingAuthAction')) {
+                    // If authenticated and has pending action, handle it now
+                    console.log('Authenticated user with pending action');
                     await handlePostAuthFlow();
                 } else if (!currentUser.is_anonymous && playerName) {
                     // Welcome back message for returning authenticated users
@@ -1766,6 +1829,41 @@
             }
         }
 
+        // Migrate scores from anonymous user to authenticated user
+        async function migrateAnonymousScores(anonymousUserId, newUserId) {
+            if (!anonymousUserId || !newUserId || anonymousUserId === newUserId) return;
+
+            console.log('Migrating scores from', anonymousUserId, 'to', newUserId);
+            try {
+                // Update daily_scores to use the new user ID
+                const { error } = await db
+                    .from('daily_scores')
+                    .update({ player_uuid: newUserId })
+                    .eq('player_uuid', anonymousUserId);
+
+                if (error) {
+                    console.error('Score migration error:', error);
+                } else {
+                    console.log('Score migration complete');
+                }
+
+                // Also update league_memberships if any
+                await db
+                    .from('league_memberships')
+                    .update({ player_uuid: newUserId })
+                    .eq('player_uuid', anonymousUserId);
+
+                // Update players table
+                await db
+                    .from('players')
+                    .update({ uuid: newUserId })
+                    .eq('uuid', anonymousUserId);
+
+            } catch (e) {
+                console.error('Score migration exception:', e);
+            }
+        }
+
         async function sendMagicLink(email, isModal = false) {
             const successEl = isModal ? authModalSuccess : authPromptSuccess;
             const errorEl = isModal ? authModalError : authPromptError;
@@ -1775,6 +1873,23 @@
                 btnEl.disabled = true;
                 btnEl.textContent = 'Sending...';
                 errorEl.classList.add('hidden');
+
+                // Save completed game state before sending magic link
+                if (gameOver && currentDate) {
+                    const stats = getStats();
+                    const result = stats.played[currentDate];
+                    if (result) {
+                        localStorage.setItem('pendingGameState', JSON.stringify({
+                            date: currentDate,
+                            completed: true,
+                            mistakes: result.mistakes,
+                            won: result.won,
+                            guessHistory: result.guessHistory,
+                            anonymousUserId: getCurrentUserId()
+                        }));
+                        console.log('Saved pending game state for magic link flow');
+                    }
+                }
 
                 // Store pending action in sessionStorage so it survives page reload
                 if (pendingAuthAction) {
