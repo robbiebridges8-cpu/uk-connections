@@ -1,5 +1,5 @@
 [build]
-  command = "sed -i'' -e 's|NETLIFY_SUPABASE_URL|'\"$SUPABASE_URL\"'|g; s|NETLIFY_SUPABASE_ANON_KEY|'\"$SUPABASE_ANON_KEY\"'|g' index.html"
+  command = "sed -i 's|NETLIFY_SUPABASE_URL|'\"$SUPABASE_URL\"'|g; s|NETLIFY_SUPABASE_ANON_KEY|'\"$SUPABASE_ANON_KEY\"'|g' index.html"
   publish = "."
 
 # SPA fallback - serve index.html for all other routes
