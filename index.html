@@ -1839,12 +1839,12 @@
 
         // ===== UTILITY FUNCTIONS =====
         function getTodayString() {
-            const now = new Date();
-            now.setDate(now.getDate() + 1); // TEMP: Load tomorrow's puzzle
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return new Date().toLocaleDateString('en-GB', {
+                timeZone: 'Europe/London',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).split('/').reverse().join('-');
         }
 
         function normalizeDate(dateStr) {
