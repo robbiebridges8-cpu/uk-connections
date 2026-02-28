@@ -1515,8 +1515,10 @@
         const PUZZLE_CACHE_KEY = 'cached-puzzle';
         const SHARE_EMOJIS = ['🟨', '🟩', '🟦', '🟪']; // Yellow, green, blue, purple
 
-        // Supabase client (initialized by initConfig)
-        let db = null;
+        // Supabase configuration (placeholders replaced at build time by Netlify)
+        const SUPABASE_URL = 'NETLIFY_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'NETLIFY_SUPABASE_ANON_KEY';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ===== STATE =====
         let currentPuzzle = null;
@@ -1594,21 +1596,6 @@
         const welcomeModal = document.getElementById('welcomeModal');
         const welcomeNameInput = document.getElementById('welcomeNameInput');
         const welcomeSubmit = document.getElementById('welcomeSubmit');
-
-        // ===== CONFIG INITIALIZATION =====
-        async function initConfig() {
-            try {
-                const response = await fetch('/api/config');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch config');
-                }
-                const config = await response.json();
-                db = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-            } catch (error) {
-                console.error('Failed to initialize config:', error);
-                throw error;
-            }
-        }
 
         // ===== AUTH FUNCTIONS =====
         function getCurrentUserId() {
@@ -2991,9 +2978,6 @@
 
         // ===== INIT =====
         async function init() {
-            // Load configuration and initialize Supabase client
-            await initConfig();
-
             // Initialize auth FIRST (especially important when returning from magic link)
             await initAuth();
 

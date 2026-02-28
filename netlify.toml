@@ -1,0 +1,21 @@
+[build]
+  command = "sed -i'' -e 's|NETLIFY_SUPABASE_URL|'\"$SUPABASE_URL\"'|g; s|NETLIFY_SUPABASE_ANON_KEY|'\"$SUPABASE_ANON_KEY\"'|g' index.html"
+  publish = "."
+  functions = "netlify/functions"
+
+# Redirect API calls to Netlify Functions
+[[redirects]]
+  from = "/api/puzzle/*"
+  to = "/.netlify/functions/puzzle"
+  status = 200
+
+[[redirects]]
+  from = "/api/puzzles"
+  to = "/.netlify/functions/puzzle"
+  status = 200
+
+# SPA fallback - serve index.html for all other routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
