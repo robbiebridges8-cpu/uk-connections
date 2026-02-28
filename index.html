@@ -26,11 +26,13 @@
             --text-secondary: rgba(255, 255, 255, 0.6);
             --text-muted: rgba(255, 255, 255, 0.4);
 
-            /* Gradient colors for solved groups - UK Met Office style */
-            --gradient-1: linear-gradient(135deg, #22c55e, #16a34a);  /* Green - easiest */
-            --gradient-2: linear-gradient(135deg, #eab308, #ca8a04);  /* Yellow */
-            --gradient-3: linear-gradient(135deg, #f97316, #ea580c);  /* Amber */
-            --gradient-4: linear-gradient(135deg, #ef4444, #dc2626);  /* Red - hardest */
+            /* Category colors */
+            --category-1: #F5D800;  /* Easiest - yellow */
+            --category-2: #6CC66C;  /* Easy - green */
+            --category-3: #36DFE7;  /* Hard - cyan */
+            --category-4: #7E4E7E;  /* Hardest - purple */
+            --category-text-light: #1a1a1a;  /* Dark text for light backgrounds */
+            --category-text-dark: #ffffff;   /* Light text for dark backgrounds */
         }
 
         body {
@@ -94,19 +96,23 @@
         }
 
         .header-btn {
-            background: transparent;
-            border: none;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             color: var(--text-secondary);
-            font-size: 1.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
             cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 20px;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .header-btn:hover {
             color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
         /* Main container */
@@ -173,10 +179,10 @@
             border-radius: 3px;
         }
 
-        .difficulty-swatch.swatch-1 { background: var(--gradient-1); }
-        .difficulty-swatch.swatch-2 { background: var(--gradient-2); }
-        .difficulty-swatch.swatch-3 { background: var(--gradient-3); }
-        .difficulty-swatch.swatch-4 { background: var(--gradient-4); }
+        .difficulty-swatch.swatch-1 { background: var(--category-1); }
+        .difficulty-swatch.swatch-2 { background: var(--category-2); }
+        .difficulty-swatch.swatch-3 { background: var(--category-3); }
+        .difficulty-swatch.swatch-4 { background: var(--category-4); }
 
         /* Solved categories area */
         .solved-area {
@@ -196,10 +202,10 @@
             animation: solvedReveal 0.5s ease forwards;
         }
 
-        .solved-category.gradient-1 { background: var(--gradient-1); }
-        .solved-category.gradient-2 { background: var(--gradient-2); }
-        .solved-category.gradient-3 { background: var(--gradient-3); }
-        .solved-category.gradient-4 { background: var(--gradient-4); }
+        .solved-category.gradient-1 { background: var(--category-1); color: var(--category-text-light); }
+        .solved-category.gradient-2 { background: var(--category-2); color: var(--category-text-light); }
+        .solved-category.gradient-3 { background: var(--category-3); color: var(--category-text-light); }
+        .solved-category.gradient-4 { background: var(--category-4); color: var(--category-text-dark); }
 
         @keyframes solvedReveal {
             0% {
@@ -218,15 +224,29 @@
             letter-spacing: 0.05em;
             margin-bottom: 6px;
             text-transform: uppercase;
-            color: #ffffff;
+            color: inherit;
+            overflow: visible;
+        }
+
+        .solved-category-name span {
+            display: inline-block;
+            white-space: nowrap;
+            transform-origin: left center;
         }
 
         .solved-category-words {
             font-size: 0.8rem;
             font-weight: 400;
-            opacity: 0.9;
+            opacity: 0.85;
             letter-spacing: 0.02em;
-            color: #ffffff;
+            color: inherit;
+            overflow: visible;
+        }
+
+        .solved-category-words span {
+            display: inline-block;
+            white-space: nowrap;
+            transform-origin: left center;
         }
 
         /* Grid */
@@ -243,7 +263,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px;
+            padding: 8px 4px;
             border-radius: 12px;
             background: var(--bg-tile);
             backdrop-filter: blur(10px);
@@ -255,12 +275,18 @@
             letter-spacing: 0.08em;
             text-transform: uppercase;
             text-align: center;
-            word-break: break-word;
+            white-space: nowrap;
             transition: all 0.2s ease;
             user-select: none;
             position: relative;
             color: #ffffff;
             overflow: hidden;
+        }
+
+        .tile span {
+            display: block;
+            white-space: nowrap;
+            transform-origin: center;
         }
 
         .tile:hover {
@@ -317,6 +343,7 @@
             display: flex;
             gap: 12px;
             justify-content: center;
+            flex-wrap: wrap;
             margin-top: auto;
             padding-top: 20px;
             width: 100%;
@@ -378,31 +405,6 @@
             opacity: 1;
             transform: translateY(0);
             pointer-events: auto;
-        }
-
-        /* Shuffle button */
-        .shuffle-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
-        .shuffle-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary);
         }
 
         /* Toast */
@@ -643,13 +645,13 @@
         }
 
         .archive-item-badge.won {
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
+            background: rgba(108, 198, 108, 0.2);
+            color: #6CC66C;
         }
 
         .archive-item-badge.lost {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+            background: rgba(126, 78, 126, 0.3);
+            color: #a080a0;
         }
 
         .archive-item-badge.play {
@@ -1141,13 +1143,6 @@
                 padding: 12px 24px;
                 font-size: 0.85rem;
             }
-
-            .shuffle-btn {
-                width: 44px;
-                height: 44px;
-                bottom: 12px;
-                right: 12px;
-            }
         }
 
         @media (max-width: 360px) {
@@ -1184,6 +1179,111 @@
                 padding-top: 12px;
             }
         }
+
+        /* Auth prompt on end screen */
+        .auth-prompt {
+            width: 100%;
+            max-width: 350px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .auth-prompt.hidden {
+            display: none;
+        }
+
+        .auth-prompt-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .auth-prompt-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .auth-prompt-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .auth-prompt-input {
+            flex: 1;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+
+        .auth-prompt-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .auth-prompt-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .auth-prompt-btn {
+            padding: 10px 16px;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .auth-prompt-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .auth-prompt-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .auth-prompt-success {
+            font-size: 0.85rem;
+            color: #6CC66C;
+            padding: 12px;
+        }
+
+        .auth-prompt-error {
+            font-size: 0.8rem;
+            color: #ff6b6b;
+            margin-top: 8px;
+        }
+
+        .auth-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+        }
+
+        .auth-status a {
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .auth-status a:hover {
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -1193,9 +1293,9 @@
             <div class="tagline">The game you know and love, without the Americanisms.</div>
         </div>
         <div class="header-actions">
-            <button class="header-btn" id="archiveBtn" aria-label="Archive">&#x1F4C5;</button>
-            <button class="header-btn" id="rulesBtn" aria-label="How to play">?</button>
-            <button class="header-btn" id="statsBtn" aria-label="Statistics">&#x1F4CA;</button>
+            <button class="header-btn" id="archiveBtn" aria-label="Archive">Past Puzzles</button>
+            <button class="header-btn" id="rulesBtn" aria-label="How to play">How to Play</button>
+            <button class="header-btn" id="statsBtn" aria-label="Statistics">Stats</button>
         </div>
     </header>
 
@@ -1248,13 +1348,12 @@
             <div class="grid" id="grid"></div>
 
             <div class="buttons-area">
+                <button class="btn btn-secondary" id="shuffleBtn">Shuffle</button>
                 <button class="btn btn-secondary" id="deselectBtn">Deselect All</button>
                 <button class="btn btn-primary submit-btn" id="submitBtn" disabled>Submit</button>
             </div>
         </div>
     </main>
-
-    <button class="shuffle-btn" id="shuffleBtn" aria-label="Shuffle tiles">&#x1F500;</button>
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
@@ -1337,10 +1436,49 @@
         </div>
     </div>
 
+    <!-- Auth Required Modal (for league actions) -->
+    <div class="modal-overlay" id="authRequiredModal">
+        <div class="modal">
+            <button class="modal-close" aria-label="Close">&times;</button>
+            <h2>Sign in to Continue</h2>
+            <p>Enter your email to create or join leagues. We'll send you a magic link - no password needed.</p>
+            <input type="email" class="modal-input" id="authModalEmail" placeholder="your@email.com">
+            <button class="modal-btn" id="authModalSubmit">Send Magic Link</button>
+            <div class="auth-prompt-success hidden" id="authModalSuccess" style="text-align: center; margin-top: 16px;">Check your email for the magic link!</div>
+            <div class="auth-prompt-error hidden" id="authModalError" style="text-align: center; margin-top: 8px;"></div>
+        </div>
+    </div>
+
+    <!-- Welcome Modal (after auth, set display name) -->
+    <div class="modal-overlay" id="welcomeModal">
+        <div class="modal">
+            <h2>Welcome!</h2>
+            <p>You're signed in. Set your display name to compete in leagues with friends.</p>
+            <input type="text" class="modal-input" id="welcomeNameInput" placeholder="Your display name" maxlength="30">
+            <button class="modal-btn" id="welcomeSubmit">Continue</button>
+        </div>
+    </div>
+
     <!-- End Screen -->
     <div class="end-screen" id="endScreen">
         <div class="end-message" id="endMessage">Sorted.</div>
         <div class="end-categories" id="endCategories"></div>
+
+        <!-- Auth prompt for anonymous users -->
+        <div class="auth-prompt hidden" id="authPrompt">
+            <div class="auth-prompt-title">Save your progress</div>
+            <div class="auth-prompt-subtitle">Enter your email to sync stats across devices and join leagues</div>
+            <div class="auth-prompt-form" id="authPromptForm">
+                <input type="email" class="auth-prompt-input" id="authPromptEmail" placeholder="your@email.com">
+                <button class="auth-prompt-btn" id="authPromptBtn">Send Link</button>
+            </div>
+            <div class="auth-prompt-success hidden" id="authPromptSuccess">Check your email for the magic link!</div>
+            <div class="auth-prompt-error hidden" id="authPromptError"></div>
+            <div class="auth-status hidden" id="authStatus">
+                Signed in as <span id="authEmail"></span> · <a id="signOutBtn">Sign out</a>
+            </div>
+        </div>
+
         <div class="player-rankings hidden" id="playerRankings">
             <!-- Shows player's rank in each league -->
         </div>
@@ -1373,17 +1511,14 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // ===== CONFIGURATION =====
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRVce17rCXo1SJkPhMK0R1P4ytJAG5In25KcP66a5aNE4KEtg7u_0oQGuQzgL3-MiGUdI0_4BmQXGYK/pub?output=csv';
         const GRADIENT_CLASSES = ['gradient-1', 'gradient-2', 'gradient-3', 'gradient-4'];
-        const SHARE_EMOJIS = ['🟩', '🟨', '🟧', '🟥']; // Green, Yellow, Amber, Red - UK Met Office style
+        const PUZZLE_CACHE_KEY = 'cached-puzzle';
+        const SHARE_EMOJIS = ['🟨', '🟩', '🟦', '🟪']; // Yellow, green, blue, purple
 
-        // Supabase configuration
-        const SUPABASE_URL = 'https://bwybtkrfgepsoeuvxvmf.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3eWJ0a3JmZ2Vwc29ldXZ4dm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjIzMzcsImV4cCI6MjA4NzYzODMzN30.aF5KTncfws-grjCkgwQD47fUSkTuJC6-gJMhB0JC0F4';
-        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Supabase client (initialized by initConfig)
+        let db = null;
 
         // ===== STATE =====
-        let allPuzzles = [];
         let currentPuzzle = null;
         let currentDate = null; // The date of the puzzle being played
         let remainingWords = [];
@@ -1435,14 +1570,290 @@
         const leaderboardsContainer = document.getElementById('leaderboardsContainer');
 
         // League state
-        let playerUUID = localStorage.getItem('player-uuid');
+        let currentUser = null; // Supabase user object
         let playerName = localStorage.getItem('player-name');
         let playerLeagues = [];
         let pendingLeagueId = null; // League to join after name entry
+        let pendingAuthAction = null; // Action to perform after auth (e.g., { type: 'create_league' } or { type: 'join_league', leagueId: '...' })
+
+        // Auth elements
+        const authPrompt = document.getElementById('authPrompt');
+        const authPromptForm = document.getElementById('authPromptForm');
+        const authPromptEmail = document.getElementById('authPromptEmail');
+        const authPromptBtn = document.getElementById('authPromptBtn');
+        const authPromptSuccess = document.getElementById('authPromptSuccess');
+        const authPromptError = document.getElementById('authPromptError');
+        const authStatus = document.getElementById('authStatus');
+        const authEmail = document.getElementById('authEmail');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const authRequiredModal = document.getElementById('authRequiredModal');
+        const authModalEmail = document.getElementById('authModalEmail');
+        const authModalSubmit = document.getElementById('authModalSubmit');
+        const authModalSuccess = document.getElementById('authModalSuccess');
+        const authModalError = document.getElementById('authModalError');
+        const welcomeModal = document.getElementById('welcomeModal');
+        const welcomeNameInput = document.getElementById('welcomeNameInput');
+        const welcomeSubmit = document.getElementById('welcomeSubmit');
+
+        // ===== CONFIG INITIALIZATION =====
+        async function initConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch config');
+                }
+                const config = await response.json();
+                db = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+            } catch (error) {
+                console.error('Failed to initialize config:', error);
+                throw error;
+            }
+        }
+
+        // ===== AUTH FUNCTIONS =====
+        function getCurrentUserId() {
+            return currentUser?.id || null;
+        }
+
+        function isAnonymousUser() {
+            return currentUser?.is_anonymous === true;
+        }
+
+        function isAuthenticatedUser() {
+            return currentUser && !currentUser.is_anonymous;
+        }
+
+        async function initAuth() {
+            // Handle PKCE code exchange (used when returning from magic link with ?code= param)
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+
+            if (code) {
+                try {
+                    const { data, error } = await db.auth.exchangeCodeForSession(code);
+                    if (error) {
+                        console.error('Code exchange error:', error);
+                    } else {
+                        // Clear URL params
+                        window.history.replaceState({}, '', window.location.pathname);
+                    }
+                } catch (e) {
+                    console.error('Code exchange exception:', e);
+                }
+            }
+
+            // Listen for auth state changes
+            // This will fire when Supabase processes tokens from the URL (magic link, OAuth, etc.)
+            db.auth.onAuthStateChange(async (event, session) => {
+                console.log('Auth state changed:', event, session?.user?.id, session?.user?.is_anonymous);
+
+                const wasAnonymous = currentUser?.is_anonymous;
+                const wasNull = currentUser === null;
+                currentUser = session?.user || null;
+
+                // Update UI based on auth state
+                updateAuthUI();
+
+                // Clean up URL after successful authentication (magic link tokens in hash)
+                if (event === 'SIGNED_IN' && currentUser && !currentUser.is_anonymous) {
+                    if (window.location.hash) {
+                        window.history.replaceState({}, '', window.location.pathname);
+                    }
+                }
+
+                // If user just upgraded from anonymous to authenticated, or just signed in
+                if ((wasAnonymous || wasNull) && currentUser && !currentUser.is_anonymous) {
+                    console.log('User is now authenticated');
+                    await handlePostAuthFlow();
+                }
+            });
+
+            // Check for existing session
+            const { data: { session } } = await db.auth.getSession();
+            console.log('Initial session check:', session?.user?.id, session?.user?.is_anonymous);
+
+            if (session?.user) {
+                currentUser = session.user;
+                updateAuthUI();
+
+                // If authenticated and has pending action, handle it now
+                const hasPending = sessionStorage.getItem('pendingAuthAction');
+                if (!currentUser.is_anonymous && hasPending) {
+                    console.log('Authenticated user with pending action:', hasPending);
+                    await handlePostAuthFlow();
+                } else if (!currentUser.is_anonymous && playerName) {
+                    // Welcome back message for returning authenticated users
+                    showToast(`Welcome back, ${playerName}!`);
+                }
+            } else {
+                // No session, sign in anonymously
+                console.log('No session, signing in anonymously');
+                const { data, error } = await db.auth.signInAnonymously();
+                if (error) {
+                    console.error('Anonymous auth error:', error);
+                } else {
+                    currentUser = data.user;
+                    updateAuthUI();
+                }
+            }
+        }
+
+        async function handlePostAuthFlow() {
+            console.log('handlePostAuthFlow called');
+
+            // Check for pending action from sessionStorage
+            const storedAction = sessionStorage.getItem('pendingAuthAction');
+            if (storedAction) {
+                console.log('Found pending action:', storedAction);
+                sessionStorage.removeItem('pendingAuthAction');
+                pendingAuthAction = JSON.parse(storedAction);
+            }
+
+            // If user doesn't have a display name, show welcome modal
+            if (!playerName) {
+                console.log('No player name, showing welcome modal');
+                const modal = document.getElementById('welcomeModal');
+                if (modal) {
+                    openModal(modal);
+                } else {
+                    console.error('Welcome modal not found!');
+                    // Fallback: just show a prompt
+                    const name = prompt('Welcome! Enter your display name:');
+                    if (name) {
+                        setPlayerName(name);
+                        const userId = getCurrentUserId();
+                        if (userId) {
+                            await db.from('players').upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
+                        }
+                        await handlePendingAuthAction();
+                    }
+                }
+            } else {
+                // Has display name, handle pending action directly
+                console.log('Has player name, handling pending action');
+                await handlePendingAuthAction();
+            }
+        }
+
+        async function handlePendingAuthAction() {
+            if (!pendingAuthAction) return;
+
+            const action = pendingAuthAction;
+            pendingAuthAction = null;
+
+            console.log('Handling pending action:', action);
+
+            if (action.type === 'create_league') {
+                // Reset and open create league modal
+                const form = document.getElementById('createLeagueForm');
+                const urlContainer = document.getElementById('leagueUrlContainer');
+                const title = document.getElementById('createLeagueTitle');
+                const nameInput = document.getElementById('leagueNameInput');
+                if (nameInput) nameInput.value = '';
+                if (form) form.classList.remove('hidden');
+                if (urlContainer) urlContainer.classList.add('hidden');
+                if (title) title.textContent = 'Create a League';
+                openModal(createLeagueModal);
+            } else if (action.type === 'join_league' && action.leagueId) {
+                await joinLeague(action.leagueId);
+            } else if (action.type === 'welcome') {
+                // Just signed up, show toast
+                showToast('Signed in successfully!');
+            }
+        }
+
+
+        function updateAuthUI() {
+            if (!authPrompt) return;
+
+            if (isAuthenticatedUser()) {
+                // Hide auth prompt entirely for signed-in users
+                authPrompt.classList.add('hidden');
+            } else {
+                // Show email prompt for anonymous users
+                authPromptForm.classList.remove('hidden');
+                authPromptSuccess.classList.add('hidden');
+                authPromptError.classList.add('hidden');
+                authStatus.classList.add('hidden');
+                authPrompt.classList.remove('hidden');
+            }
+        }
+
+        async function sendMagicLink(email, isModal = false) {
+            const successEl = isModal ? authModalSuccess : authPromptSuccess;
+            const errorEl = isModal ? authModalError : authPromptError;
+            const btnEl = isModal ? authModalSubmit : authPromptBtn;
+
+            try {
+                btnEl.disabled = true;
+                btnEl.textContent = 'Sending...';
+                errorEl.classList.add('hidden');
+
+                // Store pending action in sessionStorage so it survives page reload
+                if (pendingAuthAction) {
+                    sessionStorage.setItem('pendingAuthAction', JSON.stringify(pendingAuthAction));
+                } else {
+                    // If signing up from end screen prompt, set a flag to show welcome
+                    sessionStorage.setItem('pendingAuthAction', JSON.stringify({ type: 'welcome' }));
+                }
+
+                const { error } = await db.auth.signInWithOtp({
+                    email,
+                    options: {
+                        emailRedirectTo: window.location.origin
+                    }
+                });
+
+                if (error) throw error;
+
+                // Show success
+                if (isModal) {
+                    authModalEmail.classList.add('hidden');
+                    btnEl.classList.add('hidden');
+                } else {
+                    authPromptForm.classList.add('hidden');
+                }
+                successEl.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Magic link error:', error);
+                errorEl.textContent = error.message || 'Failed to send magic link';
+                errorEl.classList.remove('hidden');
+            } finally {
+                btnEl.disabled = false;
+                btnEl.textContent = 'Send Link';
+            }
+        }
+
+        async function signOut() {
+            try {
+                await db.auth.signOut();
+                // Sign in anonymously again
+                const { data } = await db.auth.signInAnonymously();
+                currentUser = data?.user || null;
+                playerLeagues = [];
+                cachedLeaderboards = [];
+                updateAuthUI();
+                renderLeagueWidget();
+            } catch (error) {
+                console.error('Sign out error:', error);
+            }
+        }
+
+        function requireAuth(action) {
+            if (isAuthenticatedUser()) {
+                return true; // Already authenticated
+            }
+            // Store the pending action and show auth modal
+            pendingAuthAction = action;
+            openModal(authRequiredModal);
+            return false;
+        }
 
         // ===== UTILITY FUNCTIONS =====
         function getTodayString() {
             const now = new Date();
+            now.setDate(now.getDate() + 1); // TEMP: Load tomorrow's puzzle
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const day = String(now.getDate()).padStart(2, '0');
@@ -1587,30 +1998,15 @@
         }
 
         // ===== PLAYER/LEAGUE MANAGEMENT =====
-        function generateUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
-
-        function ensurePlayerUUID() {
-            if (!playerUUID) {
-                playerUUID = generateUUID();
-                localStorage.setItem('player-uuid', playerUUID);
-            }
-            return playerUUID;
-        }
-
         function setPlayerName(name) {
             playerName = name;
             localStorage.setItem('player-name', name);
         }
 
         async function fetchPlayerLeagues() {
-            console.log('fetchPlayerLeagues called, playerUUID:', playerUUID);
-            if (!playerUUID) return [];
+            const userId = getCurrentUserId();
+            console.log('fetchPlayerLeagues called, userId:', userId);
+            if (!userId) return [];
             try {
                 const today = getTodayString();
 
@@ -1618,7 +2014,7 @@
                 const { data: memberships, error } = await db
                     .from('league_memberships')
                     .select('league_id, leagues(id, name)')
-                    .eq('player_uuid', playerUUID);
+                    .eq('player_uuid', userId);
 
                 console.log('Memberships query result:', { memberships, error });
 
@@ -1685,6 +2081,9 @@
         }
 
         async function createLeague(name) {
+            const userId = getCurrentUserId();
+            if (!userId) return null;
+
             try {
                 // Generate a short ID
                 const id = crypto.randomUUID().slice(0, 8);
@@ -1696,7 +2095,6 @@
                 if (error) throw error;
 
                 // Auto-join the league we created
-                ensurePlayerUUID();
                 if (playerName) {
                     await joinLeague(id);
                 }
@@ -1710,7 +2108,9 @@
         }
 
         async function joinLeague(leagueId) {
-            ensurePlayerUUID();
+            const userId = getCurrentUserId();
+            if (!userId) return false;
+
             if (!playerName) {
                 // Need to prompt for name first
                 pendingLeagueId = leagueId;
@@ -1728,12 +2128,12 @@
                 // Upsert player
                 await db
                     .from('players')
-                    .upsert({ uuid: playerUUID, display_name: playerName.trim() }, { onConflict: 'uuid' });
+                    .upsert({ uuid: userId, display_name: playerName.trim() }, { onConflict: 'uuid' });
 
                 // Add membership if not exists
                 await db
                     .from('league_memberships')
-                    .upsert({ player_uuid: playerUUID, league_id: leagueId }, { onConflict: 'player_uuid,league_id', ignoreDuplicates: true });
+                    .upsert({ player_uuid: userId, league_id: leagueId }, { onConflict: 'player_uuid,league_id', ignoreDuplicates: true });
 
                 await fetchPlayerLeagues();
                 return true;
@@ -1744,7 +2144,8 @@
         }
 
         async function submitScore(mistakeCount) {
-            if (!playerUUID || playerLeagues.length === 0) return;
+            const userId = getCurrentUserId();
+            if (!userId || playerLeagues.length === 0) return;
 
             try {
                 // Insert/update score for each league the player is in
@@ -1752,7 +2153,7 @@
                     await db
                         .from('daily_scores')
                         .upsert(
-                            { player_uuid: playerUUID, league_id: league.id, date: currentDate, mistakes: mistakeCount },
+                            { player_uuid: userId, league_id: league.id, date: currentDate, mistakes: mistakeCount },
                             { onConflict: 'player_uuid,league_id,date' }
                         );
                 }
@@ -1842,8 +2243,9 @@
                 return;
             }
 
+            const userId = getCurrentUserId();
             playerRankings.innerHTML = leaderboards.map(lb => {
-                const me = lb.leaderboard.find(p => p.uuid === playerUUID);
+                const me = lb.leaderboard.find(p => p.uuid === userId);
                 const totalPlayers = lb.leaderboard.length;
                 const rankText = me?.rank ? `<strong>#${me.rank}</strong> of ${totalPlayers}` : 'Not ranked';
 
@@ -1871,7 +2273,7 @@
             document.getElementById('nextLeagueBtn').disabled = index === cachedLeaderboards.length - 1;
 
             document.getElementById('leagueModalLeaderboard').innerHTML = lb.leaderboard.map(player => `
-                <div class="leaderboard-item ${player.uuid === playerUUID ? 'current-player' : ''}">
+                <div class="leaderboard-item ${player.uuid === getCurrentUserId() ? 'current-player' : ''}">
                     <span class="leaderboard-rank">${player.rank !== null ? '#' + player.rank : '-'}</span>
                     <span class="leaderboard-name">${player.display_name}</span>
                     ${player.mistakes !== null
@@ -1888,24 +2290,31 @@
 
             if (match) {
                 const leagueId = match[1];
-                ensurePlayerUUID();
+                const userId = getCurrentUserId();
 
-                // Check if already a member
-                try {
-                    const { data } = await db
-                        .from('league_memberships')
-                        .select('*')
-                        .eq('league_id', leagueId)
-                        .eq('player_uuid', playerUUID)
-                        .single();
+                // Check if already a member (only if authenticated)
+                if (userId && isAuthenticatedUser()) {
+                    try {
+                        const { data } = await db
+                            .from('league_memberships')
+                            .select('*')
+                            .eq('league_id', leagueId)
+                            .eq('player_uuid', userId)
+                            .single();
 
-                    if (!data) {
-                        // Need to join
+                        if (!data) {
+                            // Need to join
+                            await joinLeague(leagueId);
+                        }
+                    } catch (error) {
+                        // No membership found, try to join
                         await joinLeague(leagueId);
                     }
-                } catch (error) {
-                    // No membership found, try to join
-                    await joinLeague(leagueId);
+                } else {
+                    // User is anonymous, require auth to join league
+                    if (!requireAuth({ type: 'join_league', leagueId })) {
+                        // Will be handled after auth completes
+                    }
                 }
 
                 // Clear the URL to avoid re-joining on refresh
@@ -1913,85 +2322,120 @@
             }
         }
 
-        // ===== CSV PARSING =====
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            const result = [];
+        // ===== PUZZLE FETCHING =====
 
-            for (const line of lines) {
-                const row = [];
-                let current = '';
-                let inQuotes = false;
+        // Get cached puzzle from localStorage
+        function getCachedPuzzle() {
+            try {
+                const cached = localStorage.getItem(PUZZLE_CACHE_KEY);
+                if (!cached) return null;
 
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        row.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
+                const { date, puzzle, puzzleNumber: cachedNumber } = JSON.parse(cached);
+                const today = getTodayString();
+
+                // Only use cache if it's for today's date
+                if (date === today) {
+                    return { puzzle, puzzleNumber: cachedNumber };
                 }
-                row.push(current.trim());
-                result.push(row);
+                return null;
+            } catch (e) {
+                return null;
             }
-            return result;
         }
 
-        // ===== PUZZLE FETCHING =====
-        async function fetchPuzzles() {
+        // Save puzzle to localStorage cache
+        function cachePuzzle(puzzle, num) {
             try {
-                // Add cache-busting timestamp to always get fresh data
-                const cacheBuster = `&_=${Date.now()}`;
-                const response = await fetch(SHEET_URL + cacheBuster, {
-                    cache: 'no-store'
-                });
+                localStorage.setItem(PUZZLE_CACHE_KEY, JSON.stringify({
+                    date: puzzle.date,
+                    puzzle,
+                    puzzleNumber: num
+                }));
+            } catch (e) {
+                console.warn('Failed to cache puzzle:', e);
+            }
+        }
+
+        // Transform API puzzle format to game format
+        function transformPuzzle(apiPuzzle) {
+            return {
+                date: apiPuzzle.date,
+                categories: apiPuzzle.categories.map((cat, index) => ({
+                    name: cat.title,
+                    colour: GRADIENT_CLASSES[cat.difficulty - 1] || GRADIENT_CLASSES[index],
+                    words: cat.words.map(w => w.toUpperCase())
+                }))
+            };
+        }
+
+        // Fetch today's puzzle from API
+        async function fetchTodayPuzzle() {
+            const today = getTodayString();
+            // Support ?date=YYYY-MM-DD for testing/previewing
+            const testDate = new URLSearchParams(window.location.search).get('date');
+
+            try {
+                const apiUrl = testDate ? `/api/puzzle/today?date=${testDate}` : '/api/puzzle/today';
+                const response = await fetch(apiUrl);
 
                 if (!response.ok) {
-                    throw new Error('Failed to fetch puzzles');
+                    throw new Error('Failed to fetch puzzle');
                 }
 
-                const text = await response.text();
-                const data = parseCSV(text);
+                const data = await response.json();
+                const puzzle = transformPuzzle(data);
+                puzzleNumber = data.puzzleNumber;
 
-                // Parse rows into puzzles
-                const puzzles = [];
-                for (let i = 1; i < data.length; i++) {
-                    const row = data[i];
-                    if (!row || !row[0]) continue;
+                // Cache the puzzle
+                cachePuzzle(puzzle, puzzleNumber);
 
-                    const date = normalizeDate(String(row[0]));
-                    if (!date) continue;
-
-                    const parseWords = (str) => {
-                        if (!str) return [];
-                        return String(str).split(',').map(w => w.trim().toUpperCase()).filter(w => w);
-                    };
-
-                    puzzles.push({
-                        date: date,
-                        categories: [
-                            { name: row[1] || '', colour: 'gradient-1', words: parseWords(row[2]) },
-                            { name: row[3] || '', colour: 'gradient-2', words: parseWords(row[4]) },
-                            { name: row[5] || '', colour: 'gradient-3', words: parseWords(row[6]) },
-                            { name: row[7] || '', colour: 'gradient-4', words: parseWords(row[8]) }
-                        ]
-                    });
-                }
-
-                // Calculate puzzle number
-                puzzles.sort((a, b) => a.date.localeCompare(b.date));
-                const today = getTodayString();
-                const todayIndex = puzzles.findIndex(p => p.date === today);
-                if (todayIndex >= 0) {
-                    puzzleNumber = todayIndex + 1;
-                }
-
-                return puzzles;
+                return puzzle;
             } catch (error) {
-                console.error('Error fetching puzzles:', error);
+                console.error('Error fetching puzzle from API:', error);
+
+                // Try to use cached puzzle as fallback
+                const cached = getCachedPuzzle();
+                if (cached) {
+                    console.log('Using cached puzzle');
+                    puzzleNumber = cached.puzzleNumber;
+                    return cached.puzzle;
+                }
+
+                return null;
+            }
+        }
+
+        // Fetch puzzle for a specific date (for archive)
+        async function fetchPuzzleByDate(date) {
+            try {
+                const response = await fetch(`/api/puzzle/${date}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch puzzle');
+                }
+
+                const data = await response.json();
+                const puzzle = transformPuzzle(data);
+                return { puzzle, puzzleNumber: data.puzzleNumber };
+            } catch (error) {
+                console.error('Error fetching puzzle:', error);
+                return null;
+            }
+        }
+
+        // Fetch archive (list of available puzzles)
+        async function fetchArchive() {
+            try {
+                const response = await fetch('/api/puzzles');
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch archive');
+                }
+
+                const data = await response.json();
+                return data.puzzles || [];
+            } catch (error) {
+                console.error('Error fetching archive:', error);
                 return [];
             }
         }
@@ -2002,13 +2446,32 @@
             remainingWords.forEach((word) => {
                 const tile = document.createElement('button');
                 tile.className = 'tile';
-                tile.textContent = word;
+                const span = document.createElement('span');
+                span.textContent = word;
+                tile.appendChild(span);
                 tile.dataset.word = word;
                 if (selectedWords.includes(word)) {
                     tile.classList.add('selected');
                 }
                 tile.addEventListener('click', () => handleTileClick(word));
                 gridEl.appendChild(tile);
+            });
+            // Scale text to fit tiles
+            requestAnimationFrame(() => scaleTileText());
+        }
+
+        function scaleTileText() {
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                const span = tile.querySelector('span');
+                if (!span) return;
+                span.style.transform = 'scale(1)';
+                const tileWidth = tile.clientWidth - 8; // account for padding
+                const spanWidth = span.scrollWidth;
+                if (spanWidth > tileWidth) {
+                    const scale = Math.max(0.5, tileWidth / spanWidth);
+                    span.style.transform = `scale(${scale})`;
+                }
             });
         }
 
@@ -2023,10 +2486,29 @@
             const el = document.createElement('div');
             el.className = `solved-category ${category.colour}`;
             el.innerHTML = `
-                <div class="solved-category-name">${category.name}</div>
-                <div class="solved-category-words">${category.words.join(', ')}</div>
+                <div class="solved-category-name"><span>${category.name}</span></div>
+                <div class="solved-category-words"><span>${category.words.join(', ')}</span></div>
             `;
             solvedAreaEl.appendChild(el);
+            // Scale text after render
+            requestAnimationFrame(() => scaleSolvedCategoryText(el));
+        }
+
+        function scaleSolvedCategoryText(container) {
+            const nameEl = container.querySelector('.solved-category-name');
+            const wordsEl = container.querySelector('.solved-category-words');
+            const containerWidth = container.clientWidth - 40; // account for padding
+
+            [nameEl, wordsEl].forEach(el => {
+                const span = el.querySelector('span');
+                if (!span) return;
+                span.style.transform = 'scale(1)';
+                const spanWidth = span.scrollWidth;
+                if (spanWidth > containerWidth) {
+                    const scale = Math.max(0.5, containerWidth / spanWidth);
+                    span.style.transform = `scale(${scale})`;
+                }
+            });
         }
 
         function updateButtons() {
@@ -2107,7 +2589,7 @@
             // Create particles at center
             const centerX = gridRect.left + gridRect.width / 2;
             const centerY = gridRect.top + gridRect.height / 2;
-            const colors = ['#22c55e', '#eab308', '#f97316', '#ef4444']; // Green, Yellow, Amber, Red
+            const colors = ['#F5D800', '#6CC66C', '#36DFE7', '#7E4E7E']; // Yellow, green, cyan, purple
             const colorIndex = GRADIENT_CLASSES.indexOf(category.colour);
             createParticles(centerX, centerY, colors[colorIndex]);
 
@@ -2245,13 +2727,15 @@
                 const el = document.createElement('div');
                 el.className = `solved-category ${cat.colour} end-category`;
                 el.innerHTML = `
-                    <div class="solved-category-name">${cat.name}</div>
-                    <div class="solved-category-words">${cat.words.join(', ')}</div>
+                    <div class="solved-category-name"><span>${cat.name}</span></div>
+                    <div class="solved-category-words"><span>${cat.words.join(', ')}</span></div>
                 `;
                 endCategories.appendChild(el);
 
                 setTimeout(() => {
                     el.classList.add('revealed');
+                    // Scale text after reveal animation
+                    requestAnimationFrame(() => scaleSolvedCategoryText(el));
                 }, i * 150);
             });
 
@@ -2262,6 +2746,9 @@
             } else {
                 viewLeaguesBtn.classList.add('hidden');
             }
+
+            // Show auth prompt on end screen
+            updateAuthUI();
 
             // Start countdown
             updateCountdown();
@@ -2278,7 +2765,13 @@
         }
 
         function generateShareText() {
-            const result = getTodayResult();
+            const stats = getStats();
+            const result = stats.played[currentDate];
+
+            if (!result) {
+                return null;
+            }
+
             const emoji = result.won ? (result.mistakes === 0 ? '🏆' : '✅') : '❌';
 
             let grid = '';
@@ -2297,17 +2790,47 @@
                 }
             }
 
-            return `Connections UK #${puzzleNumber} ${emoji}\n\n${grid.trim()}\n\nPlay at: ${window.location.href}`;
+            return `Connections UK #${puzzleNumber} ${emoji}\n\n${grid.trim()}\n\nPlay at: ${window.location.origin}`;
         }
 
         async function handleShare() {
             const text = generateShareText();
 
+            if (!text) {
+                showToast('Complete the puzzle first');
+                return;
+            }
+
+            // Try native share API first (works on mobile)
+            if (navigator.share) {
+                try {
+                    await navigator.share({ text });
+                    return;
+                } catch (e) {
+                    // User cancelled or share failed, fall through to clipboard
+                    if (e.name === 'AbortError') return;
+                }
+            }
+
+            // Fallback to clipboard
             try {
                 await navigator.clipboard.writeText(text);
                 showToast('Copied to clipboard');
             } catch {
-                showToast('Could not copy');
+                // Final fallback: create a temporary textarea
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast('Copied to clipboard');
+                } catch {
+                    showToast('Could not copy');
+                }
             }
         }
 
@@ -2333,23 +2856,24 @@
         }
 
         // ===== ARCHIVE =====
-        function populateArchive() {
-            archiveList.innerHTML = '';
+        async function populateArchive() {
+            archiveList.innerHTML = '<div class="loading-text">Loading archive...</div>';
             const stats = getStats();
-            const today = getTodayString();
 
-            // Filter puzzles up to today and sort by date descending
-            const availablePuzzles = allPuzzles
-                .filter(p => p.date <= today)
-                .sort((a, b) => b.date.localeCompare(a.date));
+            // Fetch archive from API
+            const archive = await fetchArchive();
 
-            availablePuzzles.forEach((puzzle, index) => {
-                const played = stats.played[puzzle.date];
-                const puzzleNum = allPuzzles.findIndex(p => p.date === puzzle.date) + 1;
+            archiveList.innerHTML = '';
+
+            // Sort by date descending
+            const sortedArchive = archive.sort((a, b) => b.date.localeCompare(a.date));
+
+            sortedArchive.forEach((puzzleInfo) => {
+                const played = stats.played[puzzleInfo.date];
 
                 const item = document.createElement('div');
                 item.className = `archive-item ${played ? 'played' : ''}`;
-                item.dataset.date = puzzle.date;
+                item.dataset.date = puzzleInfo.date;
 
                 let statusHTML = '';
                 if (played) {
@@ -2366,8 +2890,8 @@
 
                 item.innerHTML = `
                     <div class="archive-item-info">
-                        <div class="archive-item-date">${formatDateForDisplay(puzzle.date)}</div>
-                        <div class="archive-item-number">Puzzle #${puzzleNum}</div>
+                        <div class="archive-item-date">${formatDateForDisplay(puzzleInfo.date)}</div>
+                        <div class="archive-item-number">Puzzle #${puzzleInfo.puzzleNumber}</div>
                     </div>
                     <div class="archive-item-status">
                         ${statusHTML}
@@ -2377,7 +2901,7 @@
                 if (!played) {
                     item.addEventListener('click', () => {
                         closeModal(archiveModal);
-                        loadPuzzle(puzzle.date);
+                        loadPuzzle(puzzleInfo.date);
                     });
                 }
 
@@ -2386,13 +2910,19 @@
         }
 
         async function loadPuzzle(date) {
-            const puzzle = allPuzzles.find(p => p.date === date);
-            if (!puzzle) return;
+            // Fetch puzzle from API
+            const result = await fetchPuzzleByDate(date);
+            if (!result) {
+                showToast('Failed to load puzzle');
+                return;
+            }
+
+            const { puzzle, puzzleNumber: num } = result;
 
             // Reset game state
             currentPuzzle = puzzle;
             currentDate = date;
-            puzzleNumber = allPuzzles.findIndex(p => p.date === date) + 1;
+            puzzleNumber = num;
             remainingWords = [];
             selectedWords = [];
             solvedCategories = [];
@@ -2461,6 +2991,12 @@
 
         // ===== INIT =====
         async function init() {
+            // Load configuration and initialize Supabase client
+            await initConfig();
+
+            // Initialize auth FIRST (especially important when returning from magic link)
+            await initAuth();
+
             // Event listeners
             submitBtn.addEventListener('click', handleSubmit);
             deselectBtn.addEventListener('click', handleDeselect);
@@ -2474,6 +3010,12 @@
             archiveBtn.addEventListener('click', () => {
                 populateArchive();
                 openModal(archiveModal);
+            });
+
+            // Re-scale text on window resize
+            window.addEventListener('resize', () => {
+                scaleTileText();
+                document.querySelectorAll('.solved-category').forEach(el => scaleSolvedCategoryText(el));
             });
 
             // League elements
@@ -2492,6 +3034,10 @@
 
             // League event listeners
             createLeagueBtn.addEventListener('click', () => {
+                // Require authentication to create a league
+                if (!requireAuth({ type: 'create_league' })) {
+                    return; // Will open auth modal
+                }
                 resetCreateLeagueModal();
                 openModal(createLeagueModal);
             });
@@ -2568,15 +3114,17 @@
                 const name = playerNameInput.value.trim();
                 if (!name) return;
 
+                const userId = getCurrentUserId();
+                if (!userId) return;
+
                 joinLeagueSubmit.disabled = true;
                 try {
                     setPlayerName(name);
-                    ensurePlayerUUID();
 
                     // Update player name in Supabase
                     await db
                         .from('players')
-                        .upsert({ uuid: playerUUID, display_name: name.trim() }, { onConflict: 'uuid' });
+                        .upsert({ uuid: userId, display_name: name.trim() }, { onConflict: 'uuid' });
 
                     if (pendingLeagueId) {
                         if (pendingLeagueId.startsWith('CREATE:')) {
@@ -2610,24 +3158,94 @@
             // Modal close buttons
             document.querySelectorAll('.modal-close').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    closeModal(btn.closest('.modal-overlay'));
+                    const modal = btn.closest('.modal-overlay');
+                    // Reset auth modal state when closed
+                    if (modal.id === 'authRequiredModal') {
+                        pendingAuthAction = null;
+                        authModalEmail.value = '';
+                        authModalEmail.classList.remove('hidden');
+                        authModalSubmit.classList.remove('hidden');
+                        authModalSuccess.classList.add('hidden');
+                        authModalError.classList.add('hidden');
+                    }
+                    closeModal(modal);
                 });
             });
 
-            // Click outside modal to close (but not for join modal - must complete)
+            // Click outside modal to close (but not for join/welcome modals - must complete)
             document.querySelectorAll('.modal-overlay').forEach(overlay => {
                 overlay.addEventListener('click', (e) => {
-                    if (e.target === overlay && overlay.id !== 'joinLeagueModal') {
+                    if (e.target === overlay && overlay.id !== 'joinLeagueModal' && overlay.id !== 'authRequiredModal' && overlay.id !== 'welcomeModal') {
                         closeModal(overlay);
                     }
                 });
+            });
+
+            // Auth event listeners
+            authPromptBtn.addEventListener('click', () => {
+                const email = authPromptEmail.value.trim();
+                if (email) sendMagicLink(email, false);
+            });
+
+            authPromptEmail.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const email = authPromptEmail.value.trim();
+                    if (email) sendMagicLink(email, false);
+                }
+            });
+
+            authModalSubmit.addEventListener('click', () => {
+                const email = authModalEmail.value.trim();
+                if (email) sendMagicLink(email, true);
+            });
+
+            authModalEmail.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const email = authModalEmail.value.trim();
+                    if (email) sendMagicLink(email, true);
+                }
+            });
+
+            signOutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                signOut();
+            });
+
+            // Welcome modal (set display name after auth)
+            welcomeSubmit.addEventListener('click', async () => {
+                const name = welcomeNameInput.value.trim();
+                if (!name) return;
+
+                welcomeSubmit.disabled = true;
+                try {
+                    setPlayerName(name);
+                    const userId = getCurrentUserId();
+                    if (userId) {
+                        await db.from('players').upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
+                    }
+                    closeModal(welcomeModal);
+                    await renderLeagueWidget();
+                    // Handle any pending action
+                    await handlePendingAuthAction();
+                } catch (error) {
+                    console.error('Error setting name:', error);
+                    showToast('Failed to save name');
+                } finally {
+                    welcomeSubmit.disabled = false;
+                }
+            });
+
+            welcomeNameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    welcomeSubmit.click();
+                }
             });
 
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     document.querySelectorAll('.modal-overlay.visible').forEach(modal => {
-                        if (modal.id !== 'joinLeagueModal') {
+                        if (modal.id !== 'joinLeagueModal' && modal.id !== 'welcomeModal') {
                             closeModal(modal);
                         }
                     });
@@ -2639,11 +3257,8 @@
 
             updateStatsDisplay();
 
-            // Fetch and load puzzle FIRST (don't wait for Supabase)
-            allPuzzles = await fetchPuzzles();
-            const today = getTodayString();
-            currentDate = today;
-            const todayPuzzle = allPuzzles.find(p => p.date === today);
+            // Fetch today's puzzle (or test date if ?date= param present)
+            const todayPuzzle = await fetchTodayPuzzle();
 
             if (!todayPuzzle) {
                 loadingEl.classList.add('hidden');
@@ -2653,14 +3268,14 @@
             }
 
             currentPuzzle = todayPuzzle;
-            puzzleNumber = allPuzzles.findIndex(p => p.date === today) + 1;
+            currentDate = todayPuzzle.date; // Use the puzzle's actual date
 
             // Check if already played
             const stats = getStats();
-            if (stats.played[today]) {
+            if (stats.played[currentDate]) {
                 loadingEl.classList.add('hidden');
                 gameAreaEl.classList.remove('hidden');
-                restoreCompletedGame(today);
+                restoreCompletedGame(currentDate);
                 return;
             }
 
@@ -2680,9 +3295,15 @@
                     await checkLeagueUrl();
                     await renderLeagueWidget();
                 } catch (e) {
-                    console.log('League features unavailable:', e);
+                    console.log('League features error:', e);
                 }
             }, 100);
+        }
+
+        async function fetchLeaderboardsIfNeeded() {
+            if (playerLeagues.length > 0 && cachedLeaderboards.length === 0) {
+                cachedLeaderboards = await fetchLeaderboards();
+            }
         }
 
         init();
