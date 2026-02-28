@@ -1,5 +1,12 @@
 const { createClient } = require('@supabase/supabase-js');
 
+// Log environment variable status (not values for security)
+console.log('Environment check:', {
+    hasSupabaseUrl: !!process.env.SUPABASE_URL,
+    hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+    supabaseUrlPrefix: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 30) + '...' : 'MISSING'
+});
+
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_ANON_KEY
@@ -13,16 +20,36 @@ function getTodayString() {
     return `${year}-${month}-${day}`;
 }
 
+// Parse categories if stored as JSON string
+function parsePuzzle(puzzle) {
+    if (!puzzle) return null;
+
+    // If categories is a string, parse it
+    if (typeof puzzle.categories === 'string') {
+        try {
+            puzzle.categories = JSON.parse(puzzle.categories);
+        } catch (e) {
+            console.error('Failed to parse categories:', e);
+        }
+    }
+
+    return puzzle;
+}
+
 exports.handler = async (event) => {
     const params = event.queryStringParameters || {};
 
     // The original API path comes through as a query parameter from Netlify redirects
     const originalPath = params.path || event.path || '';
 
+    console.log('Request:', { originalPath, params, today: getTodayString() });
+
     try {
         // GET /api/puzzle/today
         if (originalPath.includes('/api/puzzle/today') || originalPath === '/.netlify/functions/puzzle') {
             const date = params.date || getTodayString();
+
+            console.log('Fetching puzzle for date:', date);
 
             const { data: puzzle, error } = await supabase
                 .from('puzzles')
@@ -30,7 +57,23 @@ exports.handler = async (event) => {
                 .eq('date', date)
                 .single();
 
-            if (error || !puzzle) {
+            console.log('Supabase response:', {
+                hasData: !!puzzle,
+                error: error ? { message: error.message, code: error.code, details: error.details } : null,
+                puzzleKeys: puzzle ? Object.keys(puzzle) : [],
+                categoriesType: puzzle ? typeof puzzle.categories : 'N/A'
+            });
+
+            if (error) {
+                console.error('Supabase error:', error);
+                return {
+                    statusCode: 404,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ error: 'No puzzle found for today', details: error.message })
+                };
+            }
+
+            if (!puzzle) {
                 return {
                     statusCode: 404,
                     headers: { 'Content-Type': 'application/json' },
@@ -43,13 +86,19 @@ exports.handler = async (event) => {
                 .select('*', { count: 'exact', head: true })
                 .lte('date', date);
 
+            const parsedPuzzle = parsePuzzle(puzzle);
+
+            const response = {
+                ...parsedPuzzle,
+                puzzleNumber: count || 1
+            };
+
+            console.log('Returning puzzle:', { date: response.date, puzzleNumber: response.puzzleNumber, categoriesLength: response.categories?.length });
+
             return {
                 statusCode: 200,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...puzzle,
-                    puzzleNumber: count || 1
-                })
+                body: JSON.stringify(response)
             };
         }
 
@@ -64,10 +113,11 @@ exports.handler = async (event) => {
                 .order('date', { ascending: true });
 
             if (error) {
+                console.error('Archive fetch error:', error);
                 return {
                     statusCode: 500,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ error: 'Failed to fetch puzzles' })
+                    body: JSON.stringify({ error: 'Failed to fetch puzzles', details: error.message })
                 };
             }
 
@@ -127,11 +177,13 @@ exports.handler = async (event) => {
                 .select('*', { count: 'exact', head: true })
                 .lte('date', targetDate);
 
+            const parsedPuzzle = parsePuzzle(puzzle);
+
             return {
                 statusCode: 200,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ...puzzle,
+                    ...parsedPuzzle,
                     puzzleNumber: count || 1
                 })
             };
@@ -140,7 +192,7 @@ exports.handler = async (event) => {
         return {
             statusCode: 400,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: 'Invalid request' })
+            body: JSON.stringify({ error: 'Invalid request', path: originalPath })
         };
 
     } catch (error) {
@@ -148,7 +200,7 @@ exports.handler = async (event) => {
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: 'Internal server error' })
+            body: JSON.stringify({ error: 'Internal server error', message: error.message })
         };
     }
 };
