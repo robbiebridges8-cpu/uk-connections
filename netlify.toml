@@ -3,6 +3,9 @@
   publish = "."
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+
 # Redirect API calls to Netlify Functions
 [[redirects]]
   from = "/api/puzzle/*"
