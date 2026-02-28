@@ -14,22 +14,10 @@ function getTodayString() {
 }
 
 exports.handler = async (event) => {
-    // Log the full event for debugging
-    console.log('Netlify Function Event:', JSON.stringify({
-        path: event.path,
-        rawUrl: event.rawUrl,
-        rawQuery: event.rawQuery,
-        headers: event.headers,
-        queryStringParameters: event.queryStringParameters
-    }, null, 2));
-
-    // Get the original path from rawUrl or fall back to event.path
-    const rawUrl = event.rawUrl || '';
-    const originalPath = rawUrl.includes('/api/')
-        ? rawUrl.split('?')[0]  // Extract path before query string
-        : event.path;
-
     const params = event.queryStringParameters || {};
+
+    // The original API path comes through as a query parameter from Netlify redirects
+    const originalPath = params.path || event.path || '';
 
     try {
         // GET /api/puzzle/today
