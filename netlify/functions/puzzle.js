@@ -1,16 +1,17 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Log environment variable status (not values for security)
-console.log('Environment check:', {
-    hasSupabaseUrl: !!process.env.SUPABASE_URL,
-    hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
-    supabaseUrlPrefix: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.substring(0, 30) + '...' : 'MISSING'
-});
+// Lazy-initialized Supabase client
+let supabase = null;
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-);
+function getSupabaseClient() {
+    if (!supabase) {
+        supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
+        );
+    }
+    return supabase;
+}
 
 function getTodayString() {
     const now = new Date();
@@ -24,7 +25,6 @@ function getTodayString() {
 function parsePuzzle(puzzle) {
     if (!puzzle) return null;
 
-    // If categories is a string, parse it
     if (typeof puzzle.categories === 'string') {
         try {
             puzzle.categories = JSON.parse(puzzle.categories);
@@ -37,35 +37,41 @@ function parsePuzzle(puzzle) {
 }
 
 exports.handler = async (event) => {
-    const params = event.queryStringParameters || {};
+    // Log environment variable presence (not values)
+    console.log('ENV CHECK:', {
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY
+    });
 
-    // The original API path comes through as a query parameter from Netlify redirects
+    // Initialize client inside handler to ensure env vars are available
+    const db = getSupabaseClient();
+
+    const params = event.queryStringParameters || {};
     const originalPath = params.path || event.path || '';
 
-    console.log('Request:', { originalPath, params, today: getTodayString() });
+    console.log('REQUEST:', { originalPath, params, today: getTodayString() });
 
     try {
         // GET /api/puzzle/today
         if (originalPath.includes('/api/puzzle/today') || originalPath === '/.netlify/functions/puzzle') {
             const date = params.date || getTodayString();
 
-            console.log('Fetching puzzle for date:', date);
+            console.log('FETCHING PUZZLE FOR DATE:', date);
 
-            const { data: puzzle, error } = await supabase
+            const { data: puzzle, error } = await db
                 .from('puzzles')
                 .select('*')
                 .eq('date', date)
                 .single();
 
-            console.log('Supabase response:', {
+            console.log('SUPABASE RESPONSE:', {
                 hasData: !!puzzle,
-                error: error ? { message: error.message, code: error.code, details: error.details } : null,
-                puzzleKeys: puzzle ? Object.keys(puzzle) : [],
+                error: error ? { message: error.message, code: error.code } : null,
+                puzzleDate: puzzle?.date,
                 categoriesType: puzzle ? typeof puzzle.categories : 'N/A'
             });
 
             if (error) {
-                console.error('Supabase error:', error);
                 return {
                     statusCode: 404,
                     headers: { 'Content-Type': 'application/json' },
@@ -81,24 +87,22 @@ exports.handler = async (event) => {
                 };
             }
 
-            const { count } = await supabase
+            const { count } = await db
                 .from('puzzles')
                 .select('*', { count: 'exact', head: true })
                 .lte('date', date);
 
             const parsedPuzzle = parsePuzzle(puzzle);
 
-            const response = {
-                ...parsedPuzzle,
-                puzzleNumber: count || 1
-            };
-
-            console.log('Returning puzzle:', { date: response.date, puzzleNumber: response.puzzleNumber, categoriesLength: response.categories?.length });
+            console.log('RETURNING PUZZLE:', { date: parsedPuzzle.date, puzzleNumber: count });
 
             return {
                 statusCode: 200,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(response)
+                body: JSON.stringify({
+                    ...parsedPuzzle,
+                    puzzleNumber: count || 1
+                })
             };
         }
 
@@ -106,14 +110,13 @@ exports.handler = async (event) => {
         if (originalPath.includes('/api/puzzles') || params.action === 'archive') {
             const today = getTodayString();
 
-            const { data: puzzles, error } = await supabase
+            const { data: puzzles, error } = await db
                 .from('puzzles')
                 .select('date')
                 .lte('date', today)
                 .order('date', { ascending: true });
 
             if (error) {
-                console.error('Archive fetch error:', error);
                 return {
                     statusCode: 500,
                     headers: { 'Content-Type': 'application/json' },
@@ -133,7 +136,7 @@ exports.handler = async (event) => {
             };
         }
 
-        // GET /api/puzzle/:date - extract date from path or params
+        // GET /api/puzzle/:date
         const dateMatch = originalPath.match(/\/puzzle\/(\d{4}-\d{2}-\d{2})/);
         const date = dateMatch ? dateMatch[1] : params.date;
 
@@ -149,7 +152,6 @@ exports.handler = async (event) => {
                 };
             }
 
-            // Don't expose future puzzles
             if (targetDate > today) {
                 return {
                     statusCode: 403,
@@ -158,7 +160,7 @@ exports.handler = async (event) => {
                 };
             }
 
-            const { data: puzzle, error } = await supabase
+            const { data: puzzle, error } = await db
                 .from('puzzles')
                 .select('*')
                 .eq('date', targetDate)
@@ -172,7 +174,7 @@ exports.handler = async (event) => {
                 };
             }
 
-            const { count } = await supabase
+            const { count } = await db
                 .from('puzzles')
                 .select('*', { count: 'exact', head: true })
                 .lte('date', targetDate);
@@ -196,7 +198,7 @@ exports.handler = async (event) => {
         };
 
     } catch (error) {
-        console.error('Function error:', error);
+        console.error('FUNCTION ERROR:', error);
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
