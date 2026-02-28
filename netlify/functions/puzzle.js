@@ -14,12 +14,26 @@ function getTodayString() {
 }
 
 exports.handler = async (event) => {
-    const path = event.path;
+    // Log the full event for debugging
+    console.log('Netlify Function Event:', JSON.stringify({
+        path: event.path,
+        rawUrl: event.rawUrl,
+        rawQuery: event.rawQuery,
+        headers: event.headers,
+        queryStringParameters: event.queryStringParameters
+    }, null, 2));
+
+    // Get the original path from rawUrl or fall back to event.path
+    const rawUrl = event.rawUrl || '';
+    const originalPath = rawUrl.includes('/api/')
+        ? rawUrl.split('?')[0]  // Extract path before query string
+        : event.path;
+
     const params = event.queryStringParameters || {};
 
     try {
-        // GET /api/puzzle/today or /.netlify/functions/puzzle with action=today
-        if (path.includes('/puzzle/today') || params.action === 'today') {
+        // GET /api/puzzle/today
+        if (originalPath.includes('/api/puzzle/today') || originalPath === '/.netlify/functions/puzzle') {
             const date = params.date || getTodayString();
 
             const { data: puzzle, error } = await supabase
@@ -52,7 +66,7 @@ exports.handler = async (event) => {
         }
 
         // GET /api/puzzles (archive)
-        if (path.includes('/puzzles') || params.action === 'archive') {
+        if (originalPath.includes('/api/puzzles') || params.action === 'archive') {
             const today = getTodayString();
 
             const { data: puzzles, error } = await supabase
@@ -82,7 +96,7 @@ exports.handler = async (event) => {
         }
 
         // GET /api/puzzle/:date - extract date from path or params
-        const dateMatch = path.match(/\/puzzle\/(\d{4}-\d{2}-\d{2})/);
+        const dateMatch = originalPath.match(/\/puzzle\/(\d{4}-\d{2}-\d{2})/);
         const date = dateMatch ? dateMatch[1] : params.date;
 
         if (date || params.action === 'date') {
