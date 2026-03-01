@@ -3,7 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Connections UK</title>
+    <title>Sorted. — The Daily Word Game</title>
+    <meta name="description" content="Group the words. Find the connections. Get sorted.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Sorted. — The Daily Word Game">
+    <meta property="og:description" content="Group the words. Find the connections. Get sorted.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.playconnectionsuk.co.uk">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Sorted. — The Daily Word Game">
+    <meta name="twitter:description" content="Group the words. Find the connections. Get sorted.">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
 
@@ -15,13 +27,13 @@
         }
 
         :root {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #242424;
-            --bg-tile: rgba(255, 255, 255, 0.06);
-            --bg-tile-hover: rgba(255, 255, 255, 0.1);
-            --bg-tile-selected: rgba(255, 255, 255, 0.15);
-            --border-tile: rgba(255, 255, 255, 0.1);
-            --border-selected: rgba(255, 255, 255, 0.4);
+            --bg-primary: #0d0d0d;
+            --bg-secondary: #1a1a1a;
+            --bg-tile: #1a1a1a;
+            --bg-tile-hover: #222222;
+            --bg-tile-selected: #2a2a2a;
+            --border-tile: #333333;
+            --border-selected: #555555;
             --text-primary: #ffffff;
             --text-secondary: rgba(255, 255, 255, 0.6);
             --text-muted: rgba(255, 255, 255, 0.4);
@@ -33,6 +45,15 @@
             --category-4: #7E4E7E;  /* Hardest - purple */
             --category-text-light: #000000;  /* Black text for light backgrounds */
             --category-text-dark: #ffffff;   /* Light text for dark backgrounds */
+
+            /* Current accent color (changes based on difficulty being played) */
+            --accent-color: var(--category-1);
+
+            /* Puzzle difficulty colors */
+            --difficulty-easy: #666666;
+            --difficulty-medium: #b8a000;
+            --difficulty-hard: #cc6600;
+            --difficulty-very-hard: #cc3333;
         }
 
         body {
@@ -49,15 +70,27 @@
             padding-right: env(safe-area-inset-right, 0);
         }
 
-        /* Noise texture overlay */
+        /* Top accent line */
         body::before {
             content: '';
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
+            height: 3px;
+            background: var(--accent-color);
+            z-index: 9999;
+        }
+
+        /* Noise texture overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
-            opacity: 0.03;
+            opacity: 0.02;
             pointer-events: none;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
             z-index: 0;
@@ -68,8 +101,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 20px;
-            padding-top: max(16px, env(safe-area-inset-top, 16px));
+            padding: 20px 24px;
+            padding-top: max(24px, calc(env(safe-area-inset-top, 16px) + 8px));
             position: relative;
             z-index: 10;
         }
@@ -80,45 +113,42 @@
         }
 
         .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            letter-spacing: 0.15em;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
             color: var(--text-primary);
         }
 
         .tagline {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: 400;
-            margin-top: 2px;
+            display: none;
         }
 
         .header-actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             flex-wrap: wrap;
             justify-content: flex-end;
-            max-width: 60%;
+            max-width: 65%;
         }
 
         .header-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-secondary);
-            font-size: 0.75rem;
+            background: transparent;
+            border: 1px solid var(--border-tile);
+            color: var(--text-muted);
+            font-size: 0.7rem;
             font-weight: 500;
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
             cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 20px;
-            transition: all 0.2s ease;
+            padding: 8px 14px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
             white-space: nowrap;
+            text-transform: uppercase;
         }
 
         .header-btn:hover {
             color: var(--text-primary);
-            background: rgba(255, 255, 255, 0.12);
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: var(--text-secondary);
         }
 
         /* Main container */
@@ -127,35 +157,36 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 0 20px 20px;
-            padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            padding: 0 24px 24px;
+            padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
             position: relative;
             z-index: 1;
-            max-width: 520px;
+            max-width: 560px;
             margin: 0 auto;
             width: 100%;
         }
 
-        /* Mistakes indicator */
+        /* Mistakes indicator - positioned below grid */
         .mistakes-container {
             display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            height: 24px;
+            gap: 6px;
+            height: 20px;
             align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
         }
 
         .mistake-pip {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: var(--text-secondary);
-            transition: all 0.3s ease;
+            background: var(--text-muted);
+            transition: all 0.25s ease;
         }
 
         .mistake-pip.used {
-            background: rgba(255, 255, 255, 0.15);
-            transform: scale(0.7);
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(0.6);
         }
 
         /* Difficulty legend */
@@ -163,27 +194,27 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            margin-bottom: 16px;
-            font-size: 0.65rem;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 0.6rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
         }
 
         .difficulty-label {
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .difficulty-swatches {
             display: flex;
-            gap: 4px;
+            gap: 3px;
         }
 
         .difficulty-swatch {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
         }
 
         .difficulty-swatch.swatch-1 { background: var(--category-1); }
@@ -196,17 +227,19 @@
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 8px;
+            gap: 6px;
+            margin-bottom: 6px;
         }
 
         .solved-category {
-            border-radius: 12px;
-            padding: 16px 20px;
-            text-align: center;
+            border-radius: 4px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             opacity: 0;
-            transform: scale(0.9);
-            animation: solvedReveal 0.5s ease forwards;
+            transform: translateY(-10px);
+            animation: solvedReveal 0.4s ease forwards;
         }
 
         .solved-category.gradient-1 { background: var(--category-1); color: var(--category-text-light); }
@@ -217,22 +250,41 @@
         @keyframes solvedReveal {
             0% {
                 opacity: 0;
-                transform: scale(0.9);
+                transform: translateY(-10px);
             }
             100% {
                 opacity: 1;
-                transform: scale(1);
+                transform: translateY(0);
             }
         }
 
+        .solved-category-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .solved-category-content {
+            flex: 1;
+            min-width: 0;
+        }
+
         .solved-category-name {
-            font-size: 0.85rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            margin-bottom: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             color: inherit;
-            overflow: visible;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .solved-category-name span {
@@ -242,11 +294,15 @@
         }
 
         .solved-category-words {
-            font-size: 0.8rem;
-            font-weight: 400;
+            font-size: 0.65rem;
+            font-weight: 500;
             letter-spacing: 0.02em;
             color: inherit;
-            overflow: visible;
+            opacity: 0.7;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-top: 2px;
         }
 
         .solved-category-words span {
@@ -259,34 +315,33 @@
         .grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
+            gap: 6px;
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .tile {
-            aspect-ratio: 1.2;
+            aspect-ratio: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px 4px;
-            border-radius: 12px;
+            padding: 8px 6px;
+            border-radius: 4px;
             background: var(--bg-tile);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border-tile);
+            border: 2px solid var(--border-tile);
             cursor: pointer;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
             text-align: center;
             white-space: nowrap;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
             user-select: none;
             position: relative;
             color: #ffffff;
             overflow: hidden;
+            min-height: 70px;
         }
 
         .tile span {
@@ -297,40 +352,34 @@
 
         .tile:hover {
             background: var(--bg-tile-hover);
-            transform: scale(1.02);
+            border-color: #444444;
         }
 
         .tile:active {
-            transform: scale(0.98);
+            transform: scale(0.97);
         }
 
+        /* Selected tiles get colored border based on selection order */
         .tile.selected {
             background: var(--bg-tile-selected);
-            border-color: var(--border-selected);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1),
-                        inset 0 0 20px rgba(255, 255, 255, 0.05);
-            animation: selectedPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes selectedPulse {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 255, 255, 0.1), inset 0 0 20px rgba(255, 255, 255, 0.05); }
-            50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.2), inset 0 0 25px rgba(255, 255, 255, 0.08); }
+            border-color: var(--accent-color);
+            border-width: 2px;
         }
 
         .tile.shake {
-            animation: shake 0.5s ease;
+            animation: shake 0.4s ease;
         }
 
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-8px); }
-            40% { transform: translateX(8px); }
-            60% { transform: translateX(-6px); }
-            80% { transform: translateX(6px); }
+            20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); }
+            60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
         }
 
         .tile.solving {
-            animation: tileCollapse 0.4s ease forwards;
+            animation: tileCollapse 0.35s ease forwards;
         }
 
         @keyframes tileCollapse {
@@ -340,14 +389,14 @@
             }
             100% {
                 opacity: 0;
-                transform: scale(0.5);
+                transform: scale(0.8);
             }
         }
 
         /* Buttons area */
         .buttons-area {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
             margin-top: auto;
@@ -359,26 +408,27 @@
         }
 
         .btn {
-            padding: 14px 32px;
-            border-radius: 100px;
+            padding: 12px 24px;
+            border-radius: 4px;
             font-family: inherit;
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.2s ease;
-            border: none;
+            transition: all 0.15s ease;
+            border: 2px solid transparent;
         }
 
         .btn-primary {
             background: var(--text-primary);
             color: var(--bg-primary);
+            border-color: var(--text-primary);
         }
 
         .btn-primary:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+            background: #e0e0e0;
+            border-color: #e0e0e0;
         }
 
         .btn-primary:active {
@@ -389,17 +439,16 @@
             opacity: 0.3;
             cursor: not-allowed;
             transform: none;
-            box-shadow: none;
         }
 
         .btn-secondary {
             background: transparent;
             color: var(--text-secondary);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 2px solid var(--border-tile);
         }
 
         .btn-secondary:hover {
-            border-color: rgba(255, 255, 255, 0.4);
+            border-color: var(--text-secondary);
             color: var(--text-primary);
         }
 
@@ -407,7 +456,7 @@
             opacity: 0;
             transform: translateY(10px);
             pointer-events: none;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
             position: relative;
             z-index: 101;
         }
@@ -431,11 +480,12 @@
         .toast {
             background: rgba(255, 255, 255, 0.95);
             color: var(--bg-primary);
-            padding: 12px 24px;
-            border-radius: 100px;
+            padding: 10px 20px;
+            border-radius: 4px;
             font-weight: 600;
-            font-size: 0.9rem;
-            animation: toastIn 0.3s ease, toastOut 0.3s ease 1.5s forwards;
+            font-size: 0.8rem;
+            letter-spacing: 0.02em;
+            animation: toastIn 0.25s ease, toastOut 0.25s ease 1.5s forwards;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
@@ -496,18 +546,19 @@
 
         .modal {
             background: var(--bg-secondary);
-            border-radius: 20px;
-            padding: 32px;
+            border-radius: 8px;
+            padding: 28px;
             max-width: 400px;
             width: 90%;
             max-height: 85vh;
             max-height: 85dvh;
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            transform: scale(0.9) translateY(20px);
-            transition: all 0.3s ease;
+            transform: scale(0.95) translateY(20px);
+            transition: all 0.25s ease;
             position: relative;
             margin: 20px;
+            border: 1px solid var(--border-tile);
         }
 
         .modal-overlay.visible .modal {
@@ -558,21 +609,36 @@
             margin-bottom: 24px;
         }
 
+        .stats-grid-5 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .stats-grid-5 .stat-item:nth-child(4),
+        .stats-grid-5 .stat-item:nth-child(5) {
+            grid-column: span 1;
+        }
+
+        /* Center last row if it has 2 items */
+        .stats-grid-5 {
+            justify-items: center;
+        }
+
         .stat-item {
             text-align: center;
+            padding: 8px 0;
         }
 
         .stat-value {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--text-primary);
         }
 
         .stat-label {
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.06em;
             margin-top: 4px;
         }
 
@@ -748,19 +814,19 @@
         /* League modal inputs */
         .modal-input {
             width: 100%;
-            padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            padding: 12px 14px;
+            background: var(--bg-tile);
+            border: 2px solid var(--border-tile);
+            border-radius: 4px;
             color: var(--text-primary);
             font-family: inherit;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             margin-bottom: 16px;
         }
 
         .modal-input:focus {
             outline: none;
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: var(--text-secondary);
         }
 
         .modal-input::placeholder {
@@ -769,26 +835,28 @@
 
         .modal-btn {
             width: 100%;
-            padding: 14px;
+            padding: 12px;
             background: var(--text-primary);
             color: var(--bg-primary);
-            border: none;
-            border-radius: 100px;
+            border: 2px solid var(--text-primary);
+            border-radius: 4px;
             font-family: inherit;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .modal-btn:hover {
-            transform: scale(1.02);
+            background: #e0e0e0;
+            border-color: #e0e0e0;
         }
 
         .modal-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
         .league-url-container {
@@ -1002,15 +1070,15 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding: 40px 20px;
-            padding-top: max(40px, env(safe-area-inset-top, 40px));
+            padding: 40px 24px;
+            padding-top: max(48px, calc(env(safe-area-inset-top, 40px) + 12px));
             padding-bottom: max(40px, env(safe-area-inset-bottom, 40px));
-            padding-left: max(20px, env(safe-area-inset-left, 20px));
-            padding-right: max(20px, env(safe-area-inset-right, 20px));
+            padding-left: max(24px, env(safe-area-inset-left, 24px));
+            padding-right: max(24px, env(safe-area-inset-right, 24px));
             z-index: 1500;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.5s ease;
+            transition: all 0.4s ease;
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
@@ -1021,59 +1089,102 @@
             visibility: visible;
         }
 
+        .end-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 8px;
+        }
+
         .end-message {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            letter-spacing: 0.05em;
-            margin-bottom: 32px;
-            text-align: center;
+            letter-spacing: 0.02em;
         }
 
         .end-categories {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
             width: 100%;
             max-width: 400px;
-            margin-bottom: 32px;
+            margin-top: 16px;
+            margin-bottom: 28px;
         }
 
         .end-category {
-            border-radius: 12px;
-            padding: 14px 18px;
-            text-align: center;
+            border-radius: 4px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateX(-10px);
         }
 
         .end-category.revealed {
-            animation: categoryReveal 0.5s ease forwards;
+            animation: categoryReveal 0.4s ease forwards;
         }
 
         @keyframes categoryReveal {
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateX(0);
             }
+        }
+
+        .end-category-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .end-category-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .end-category-name {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .end-category-words {
+            font-size: 0.65rem;
+            font-weight: 500;
+            opacity: 0.7;
+            margin-top: 2px;
         }
 
         .countdown-section {
             text-align: center;
-            margin-top: 24px;
+            margin-top: 20px;
         }
 
         .countdown-label {
-            font-size: 0.8rem;
+            font-size: 0.65rem;
             color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 8px;
+            letter-spacing: 0.08em;
+            margin-bottom: 6px;
         }
 
         .countdown-time {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 1.1rem;
+            font-weight: 500;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
             font-variant-numeric: tabular-nums;
+            color: var(--text-secondary);
         }
 
         /* Loading state */
@@ -1126,7 +1237,7 @@
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 40px 20px;
+            padding: 40px 24px;
             min-height: 60vh;
         }
 
@@ -1140,11 +1251,10 @@
         }
 
         .landing-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            letter-spacing: 0.1em;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
             margin-bottom: 12px;
-            text-transform: uppercase;
         }
 
         .landing-subtitle {
@@ -1155,25 +1265,25 @@
         }
 
         .landing-welcome {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--bg-tile);
+            border-radius: 4px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            border: 2px solid var(--border-tile);
         }
 
         .landing-welcome p {
-            font-size: 1rem;
+            font-size: 0.9rem;
             color: var(--text-primary);
             margin: 0;
         }
 
         .landing-leagues {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: var(--bg-tile);
+            border-radius: 4px;
+            padding: 14px;
+            margin-bottom: 20px;
+            border: 2px solid var(--border-tile);
         }
 
         .landing-league-item {
@@ -1199,34 +1309,295 @@
         }
 
         .landing-completed {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 24px;
+            background: var(--bg-tile);
+            border-radius: 4px;
+            padding: 20px;
             margin-bottom: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--border-tile);
         }
 
         .landing-completed-title {
-            font-size: 1.1rem;
+            font-size: 0.9rem;
             font-weight: 600;
             margin-bottom: 16px;
         }
 
         .landing-completed-result {
-            font-size: 1.5rem;
-            line-height: 1.8;
+            font-size: 1.3rem;
+            line-height: 1.6;
             margin-bottom: 16px;
         }
 
         .landing-play-btn {
-            font-size: 1.1rem;
-            padding: 16px 48px;
+            font-size: 0.9rem;
+            padding: 14px 40px;
             margin-bottom: 24px;
         }
 
         .landing-puzzle-number {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        /* Difficulty badge */
+        .difficulty-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .difficulty-badge.easy {
+            background: rgba(102, 102, 102, 0.2);
+            color: #999999;
+        }
+
+        .difficulty-badge.medium {
+            background: rgba(184, 160, 0, 0.2);
+            color: #d4b800;
+        }
+
+        .difficulty-badge.hard {
+            background: rgba(204, 102, 0, 0.2);
+            color: #ff8533;
+        }
+
+        .difficulty-badge.very-hard {
+            background: rgba(204, 51, 51, 0.2);
+            color: #ff5555;
+        }
+
+        .difficulty-badge.hidden {
+            display: none;
+        }
+
+        .landing-puzzle-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Author attribution */
+        .puzzle-author {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .puzzle-author.hidden {
+            display: none;
+        }
+
+        /* Submit puzzle link */
+        .submit-puzzle-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding-bottom: env(safe-area-inset-bottom, 0);
+            z-index: 100;
+        }
+
+        .submit-puzzle-btn {
+            background: transparent;
+            border: 2px solid var(--border-tile);
+            color: var(--text-muted);
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .submit-puzzle-btn:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .submit-puzzle-link.hidden {
+            display: none;
+        }
+
+        /* Puzzle submission modal */
+        .submission-modal {
+            max-width: 500px;
+            max-height: 90vh;
+        }
+
+        .submission-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .submission-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .submission-section-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+        }
+
+        .submission-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .submission-input {
+            flex: 1;
+            padding: 10px 12px;
+            background: var(--bg-tile);
+            border: 2px solid var(--border-tile);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+
+        .submission-input:focus {
+            outline: none;
+            border-color: var(--text-secondary);
+        }
+
+        .submission-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .submission-input.small {
+            padding: 8px 10px;
+            font-size: 0.8rem;
+        }
+
+        .category-section {
+            background: var(--bg-tile);
+            border: 2px solid var(--border-tile);
+            border-radius: 4px;
+            padding: 14px;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .category-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .category-number.cat-1 { background: var(--category-1); color: #000; }
+        .category-number.cat-2 { background: var(--category-2); color: #000; }
+        .category-number.cat-3 { background: var(--category-3); color: #000; }
+        .category-number.cat-4 { background: var(--category-4); color: #fff; }
+
+        .category-title-input {
+            flex: 1;
+        }
+
+        .category-words {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+
+        .submission-preview {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-tile);
+            border-radius: 4px;
+            padding: 16px;
+        }
+
+        .submission-preview-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+        }
+
+        .preview-tile {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tile);
+            border: 1px solid var(--border-tile);
+            border-radius: 3px;
+            font-size: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 2px;
+            overflow: hidden;
+        }
+
+        .submission-error {
+            color: #ff6b6b;
+            font-size: 0.8rem;
+            padding: 10px;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 4px;
+        }
+
+        .submission-error.hidden {
+            display: none;
+        }
+
+        .submission-success {
+            text-align: center;
+            padding: 24px;
+        }
+
+        .submission-success-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .submission-success-message {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .submission-success-detail {
             font-size: 0.85rem;
             color: var(--text-muted);
+        }
+
+        .submission-success.hidden {
+            display: none;
         }
 
         /* Hidden utility */
@@ -1237,58 +1608,65 @@
         /* Responsive */
         @media (max-width: 480px) {
             .header {
-                padding: 12px 16px;
+                padding: 16px;
             }
 
             .logo {
-                font-size: 1.25rem;
+                font-size: 1rem;
             }
 
             .header-actions {
-                gap: 4px;
+                gap: 6px;
             }
 
             .header-btn {
                 padding: 6px 10px;
-                font-size: 0.7rem;
+                font-size: 0.65rem;
             }
 
             .container {
-                padding: 0 12px 12px;
+                padding: 0 16px 16px;
             }
 
             .grid {
-                gap: 6px;
+                gap: 5px;
             }
 
             .tile {
-                font-size: 0.65rem;
-                border-radius: 10px;
-                padding: 6px;
+                font-size: 0.62rem;
+                border-radius: 4px;
+                padding: 6px 4px;
+                min-height: 70px;
             }
 
             .solved-category {
-                padding: 12px 16px;
+                padding: 8px 12px;
+            }
+
+            .solved-category-badge {
+                width: 20px;
+                height: 20px;
+                font-size: 0.6rem;
             }
 
             .solved-category-name {
-                font-size: 0.75rem;
+                font-size: 0.62rem;
             }
 
             .solved-category-words {
-                font-size: 0.7rem;
+                font-size: 0.58rem;
             }
 
             .btn {
-                padding: 12px 24px;
-                font-size: 0.85rem;
+                padding: 10px 20px;
+                font-size: 0.7rem;
             }
         }
 
         @media (max-width: 360px) {
             .header {
                 flex-direction: column;
-                gap: 8px;
+                gap: 10px;
                 align-items: flex-start;
             }
 
@@ -1300,12 +1678,13 @@
 
             .header-btn {
                 padding: 6px 8px;
-                font-size: 0.65rem;
+                font-size: 0.6rem;
             }
 
             .tile {
-                font-size: 0.6rem;
+                font-size: 0.55rem;
                 letter-spacing: 0.04em;
+                min-height: 70px;
             }
 
             .buttons-area {
@@ -1434,11 +1813,11 @@
         .auth-prompt {
             width: 100%;
             max-width: 350px;
-            margin-bottom: 24px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            padding: 18px;
+            background: var(--bg-tile);
+            border-radius: 4px;
+            border: 2px solid var(--border-tile);
             text-align: center;
         }
 
@@ -1447,16 +1826,16 @@
         }
 
         .auth-prompt-title {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .auth-prompt-subtitle {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .auth-prompt-form {
@@ -1466,18 +1845,18 @@
 
         .auth-prompt-input {
             flex: 1;
-            padding: 10px 14px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-tile);
+            border-radius: 4px;
             color: var(--text-primary);
             font-family: inherit;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
 
         .auth-prompt-input:focus {
             outline: none;
-            border-color: rgba(255, 255, 255, 0.3);
+            border-color: var(--text-secondary);
         }
 
         .auth-prompt-input::placeholder {
@@ -1485,27 +1864,29 @@
         }
 
         .auth-prompt-btn {
-            padding: 10px 16px;
+            padding: 10px 14px;
             background: var(--text-primary);
             color: var(--bg-primary);
-            border: none;
-            border-radius: 8px;
+            border: 2px solid var(--text-primary);
+            border-radius: 4px;
             font-family: inherit;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
             cursor: pointer;
             white-space: nowrap;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .auth-prompt-btn:hover {
-            transform: scale(1.02);
+            background: #e0e0e0;
+            border-color: #e0e0e0;
         }
 
         .auth-prompt-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
         .auth-prompt-success {
@@ -1539,8 +1920,7 @@
 <body>
     <header class="header">
         <div class="logo-section">
-            <div class="logo">CONNECTIONS UK</div>
-            <div class="tagline">The game you know and love, without the Americanisms.</div>
+            <div class="logo">Sorted.</div>
         </div>
         <div class="header-actions">
             <button class="header-btn" id="archiveBtn" aria-label="Archive">Past Puzzles</button>
@@ -1565,7 +1945,7 @@
         <!-- Landing page -->
         <div class="landing-page" id="landingPage">
             <div class="landing-content">
-                <h1 class="landing-title">Connections UK</h1>
+                <h1 class="landing-title">Sorted.</h1>
                 <p class="landing-subtitle">The game you know and love, without the Americanisms.</p>
 
                 <div class="landing-welcome hidden" id="landingWelcome">
@@ -1584,7 +1964,11 @@
 
                 <button class="btn btn-primary landing-play-btn" id="playBtn">Play</button>
 
-                <p class="landing-puzzle-number" id="landingPuzzleNumber"></p>
+                <div class="landing-puzzle-info">
+                    <span class="landing-puzzle-number" id="landingPuzzleNumber"></span>
+                    <span class="difficulty-badge hidden" id="landingDifficulty"></span>
+                </div>
+                <p class="puzzle-author hidden" id="landingAuthor"></p>
             </div>
         </div>
 
@@ -1601,13 +1985,6 @@
 
         <!-- Game area -->
         <div class="game-area hidden" id="gameArea">
-            <div class="mistakes-container" id="mistakes">
-                <div class="mistake-pip"></div>
-                <div class="mistake-pip"></div>
-                <div class="mistake-pip"></div>
-                <div class="mistake-pip"></div>
-            </div>
-
             <div class="difficulty-legend">
                 <span class="difficulty-label">Easy</span>
                 <div class="difficulty-swatches">
@@ -1622,6 +1999,13 @@
             <div class="solved-area" id="solvedArea"></div>
 
             <div class="grid" id="grid"></div>
+
+            <div class="mistakes-container" id="mistakes">
+                <div class="mistake-pip"></div>
+                <div class="mistake-pip"></div>
+                <div class="mistake-pip"></div>
+                <div class="mistake-pip"></div>
+            </div>
 
             <div class="buttons-area">
                 <button class="btn btn-secondary" id="shuffleBtn">Shuffle</button>
@@ -1651,18 +2035,26 @@
         <div class="modal">
             <button class="modal-close" aria-label="Close">&times;</button>
             <h2>Statistics</h2>
-            <div class="stats-grid">
+            <div class="stats-grid stats-grid-5">
                 <div class="stat-item">
                     <div class="stat-value" id="statPlayed">0</div>
                     <div class="stat-label">Played</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value" id="statWinRate">0%</div>
-                    <div class="stat-label">Win %</div>
+                    <div class="stat-value" id="statStreak">0</div>
+                    <div class="stat-label">Current Streak</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-value" id="statStreak">0</div>
-                    <div class="stat-label">Streak</div>
+                    <div class="stat-value" id="statBestStreak">0</div>
+                    <div class="stat-label">Best Streak</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statAvgMistakes">0</div>
+                    <div class="stat-label">Avg Mistakes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statPerfect">0</div>
+                    <div class="stat-label">Perfect Games</div>
                 </div>
             </div>
         </div>
@@ -1752,7 +2144,11 @@
 
     <!-- End Screen -->
     <div class="end-screen" id="endScreen">
-        <div class="end-message" id="endMessage">Sorted.</div>
+        <div class="end-header">
+            <div class="end-message" id="endMessage">Sorted.</div>
+            <span class="difficulty-badge hidden" id="endDifficulty"></span>
+        </div>
+        <p class="puzzle-author hidden" id="endAuthor"></p>
         <div class="end-categories" id="endCategories"></div>
 
         <!-- Auth prompt for anonymous users -->
@@ -1780,7 +2176,7 @@
             <button class="btn btn-primary" id="shareBtn">Share Result</button>
         </div>
         <div class="countdown-section">
-            <div class="countdown-label">Next puzzle in</div>
+            <div class="countdown-label">next puzzle in</div>
             <div class="countdown-time" id="countdown">--:--:--</div>
         </div>
     </div>
@@ -1797,6 +2193,100 @@
             <div class="league-indicator" id="leagueIndicator">1 / 3</div>
             <div class="leaderboard-list" id="leagueModalLeaderboard">
                 <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Puzzle Button (auth users only) -->
+    <div class="submit-puzzle-link hidden" id="submitPuzzleLink">
+        <button class="submit-puzzle-btn" id="submitPuzzleBtn">Submit a Puzzle</button>
+    </div>
+
+    <!-- Puzzle Submission Modal -->
+    <div class="modal-overlay" id="submissionModal">
+        <div class="modal submission-modal">
+            <button class="modal-close" aria-label="Close">&times;</button>
+            <h2>Submit a Puzzle</h2>
+
+            <div id="submissionForm" class="submission-form">
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 8px;">Create your own Sorted. puzzle! We'll review it and may feature it as a daily puzzle.</p>
+
+                <div class="submission-section">
+                    <div class="submission-section-title">Your Details</div>
+                    <input type="text" class="submission-input" id="submissionName" placeholder="Your name (will be shown as author)" maxlength="50">
+                    <input type="email" class="submission-input" id="submissionEmail" placeholder="Your email (for editorial contact)">
+                </div>
+
+                <div class="submission-section">
+                    <div class="submission-section-title">Categories</div>
+
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div class="category-number cat-1">1</div>
+                            <input type="text" class="submission-input small category-title-input" id="cat1Title" placeholder="Category title (e.g. London Tube Lines)" maxlength="50">
+                        </div>
+                        <div class="category-words">
+                            <input type="text" class="submission-input small" id="cat1Word1" placeholder="Word 1" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat1Word2" placeholder="Word 2" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat1Word3" placeholder="Word 3" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat1Word4" placeholder="Word 4" maxlength="20">
+                        </div>
+                    </div>
+
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div class="category-number cat-2">2</div>
+                            <input type="text" class="submission-input small category-title-input" id="cat2Title" placeholder="Category title" maxlength="50">
+                        </div>
+                        <div class="category-words">
+                            <input type="text" class="submission-input small" id="cat2Word1" placeholder="Word 1" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat2Word2" placeholder="Word 2" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat2Word3" placeholder="Word 3" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat2Word4" placeholder="Word 4" maxlength="20">
+                        </div>
+                    </div>
+
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div class="category-number cat-3">3</div>
+                            <input type="text" class="submission-input small category-title-input" id="cat3Title" placeholder="Category title" maxlength="50">
+                        </div>
+                        <div class="category-words">
+                            <input type="text" class="submission-input small" id="cat3Word1" placeholder="Word 1" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat3Word2" placeholder="Word 2" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat3Word3" placeholder="Word 3" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat3Word4" placeholder="Word 4" maxlength="20">
+                        </div>
+                    </div>
+
+                    <div class="category-section">
+                        <div class="category-header">
+                            <div class="category-number cat-4">4</div>
+                            <input type="text" class="submission-input small category-title-input" id="cat4Title" placeholder="Category title" maxlength="50">
+                        </div>
+                        <div class="category-words">
+                            <input type="text" class="submission-input small" id="cat4Word1" placeholder="Word 1" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat4Word2" placeholder="Word 2" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat4Word3" placeholder="Word 3" maxlength="20">
+                            <input type="text" class="submission-input small" id="cat4Word4" placeholder="Word 4" maxlength="20">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="submission-preview" id="submissionPreview">
+                    <div class="submission-preview-title">Preview</div>
+                    <div class="preview-grid" id="previewGrid"></div>
+                </div>
+
+                <div class="submission-error hidden" id="submissionError"></div>
+
+                <button class="modal-btn" id="submitPuzzleSubmit">Submit Puzzle</button>
+            </div>
+
+            <div class="submission-success hidden" id="submissionSuccess">
+                <div class="submission-success-icon">✓</div>
+                <div class="submission-success-message">Thanks for your submission!</div>
+                <div class="submission-success-detail">We'll review it and be in touch.</div>
             </div>
         </div>
     </div>
@@ -1947,6 +2437,14 @@
         // Blocking auth resolution - must complete before ANY UI renders
         async function resolveAuthState() {
             console.log('[Auth] resolveAuthState started');
+
+            // Demo mode - skip all auth
+            const useDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
+            if (useDemo) {
+                console.log('[Demo] Skipping auth');
+                currentUser = { id: 'demo-user', is_anonymous: true };
+                return { success: true, user: currentUser };
+            }
 
             // 1. Check for auth errors in URL hash first
             const hashError = checkAuthHashError();
@@ -2539,13 +3037,25 @@
 
         function updateStatsDisplay() {
             const stats = getStats();
-            const playedCount = Object.keys(stats.played).length;
-            const wins = Object.values(stats.played).filter(p => p.won).length;
-            const winRate = playedCount > 0 ? Math.round((wins / playedCount) * 100) : 0;
+            const playedEntries = Object.values(stats.played);
+            const playedCount = playedEntries.length;
+
+            // Calculate average mistakes (only for games played)
+            let totalMistakes = 0;
+            let perfectGames = 0;
+            playedEntries.forEach(p => {
+                totalMistakes += p.mistakes || 0;
+                if (p.won && p.mistakes === 0) {
+                    perfectGames++;
+                }
+            });
+            const avgMistakes = playedCount > 0 ? (totalMistakes / playedCount).toFixed(1) : '0.0';
 
             document.getElementById('statPlayed').textContent = playedCount;
-            document.getElementById('statWinRate').textContent = `${winRate}%`;
-            document.getElementById('statStreak').textContent = stats.streak;
+            document.getElementById('statStreak').textContent = stats.streak || 0;
+            document.getElementById('statBestStreak').textContent = stats.maxStreak || 0;
+            document.getElementById('statAvgMistakes').textContent = avgMistakes;
+            document.getElementById('statPerfect').textContent = perfectGames;
         }
 
         function hasPlayedToday() {
@@ -2942,12 +3452,31 @@
             return puzzle;
         }
 
+        // Demo puzzle for offline/local testing - add ?demo=true to URL
+        const DEMO_PUZZLE = {
+            date: getTodayString(),
+            categories: [
+                { name: 'LONDON TUBE LINES', words: ['CENTRAL', 'JUBILEE', 'NORTHERN', 'VICTORIA'], difficulty: 1 },
+                { name: 'BRITISH BISCUITS', words: ['DIGESTIVE', 'BOURBON', 'HOBNOB', 'CUSTARD CREAM'], difficulty: 2 },
+                { name: 'WORDS BEFORE "GARDEN"', words: ['BEER', 'COVENT', 'ROOF', 'SECRET'], difficulty: 3 },
+                { name: 'COCKNEY RHYMING SLANG', words: ['BARNET', 'PLATES', 'BREAD', 'PORKY'], difficulty: 4 }
+            ]
+        };
+
         // Fetch today's puzzle from Supabase
         async function fetchTodayPuzzle() {
             const today = getTodayString();
             // Support ?date=YYYY-MM-DD for testing/previewing
             const testDate = new URLSearchParams(window.location.search).get('date');
             const targetDate = testDate || today;
+
+            // Use demo mode if ?demo=true
+            const useDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
+            if (useDemo) {
+                console.log('[Demo] Using demo puzzle');
+                puzzleNumber = 42;
+                return DEMO_PUZZLE;
+            }
 
             try {
                 // Fetch the puzzle for the target date
@@ -2986,7 +3515,10 @@
                     return cached.puzzle;
                 }
 
-                return null;
+                // Fallback to demo puzzle if nothing else works
+                console.log('[Demo] Falling back to demo puzzle');
+                puzzleNumber = 42;
+                return DEMO_PUZZLE;
             }
         }
 
@@ -3089,9 +3621,14 @@
         function renderSolvedCategory(category) {
             const el = document.createElement('div');
             el.className = `solved-category ${category.colour}`;
+            // Extract difficulty number from colour class (gradient-1 -> 1)
+            const difficultyNum = category.colour.replace('gradient-', '');
             el.innerHTML = `
-                <div class="solved-category-name"><span>${category.name}</span></div>
-                <div class="solved-category-words"><span>${category.words.join(', ')}</span></div>
+                <div class="solved-category-badge">${difficultyNum}</div>
+                <div class="solved-category-content">
+                    <div class="solved-category-name"><span>${category.name}</span></div>
+                    <div class="solved-category-words"><span>${category.words.join(', ')}</span></div>
+                </div>
             `;
             solvedAreaEl.appendChild(el);
             // Scale text after render
@@ -3101,9 +3638,11 @@
         function scaleSolvedCategoryText(container) {
             const nameEl = container.querySelector('.solved-category-name');
             const wordsEl = container.querySelector('.solved-category-words');
-            const containerWidth = container.clientWidth - 40; // account for padding
+            const contentEl = container.querySelector('.solved-category-content');
+            const containerWidth = (contentEl ? contentEl.clientWidth : container.clientWidth) - 20;
 
             [nameEl, wordsEl].forEach(el => {
+                if (!el) return;
                 const span = el.querySelector('span');
                 if (!span) return;
                 span.style.transform = 'scale(1)';
@@ -3326,14 +3865,45 @@
         }
 
         function showEndScreen() {
+            // Show difficulty badge on end screen
+            const endDifficulty = document.getElementById('endDifficulty');
+            const endAuthor = document.getElementById('endAuthor');
+
+            if (currentPuzzle.difficulty) {
+                const difficultyLabels = {
+                    'easy': 'Easy',
+                    'medium': 'Medium',
+                    'hard': 'Hard',
+                    'very_hard': 'Very Hard'
+                };
+                const difficultyClass = currentPuzzle.difficulty.replace('_', '-');
+                endDifficulty.textContent = difficultyLabels[currentPuzzle.difficulty] || currentPuzzle.difficulty;
+                endDifficulty.className = `difficulty-badge ${difficultyClass}`;
+            } else {
+                endDifficulty.classList.add('hidden');
+            }
+
+            // Show author attribution if user-submitted puzzle
+            if (currentPuzzle.is_user_submitted && currentPuzzle.author_name) {
+                endAuthor.textContent = `Authored by ${currentPuzzle.author_name}`;
+                endAuthor.classList.remove('hidden');
+            } else {
+                endAuthor.classList.add('hidden');
+            }
+
             // Build end categories
             endCategories.innerHTML = '';
             currentPuzzle.categories.forEach((cat, i) => {
                 const el = document.createElement('div');
                 el.className = `solved-category ${cat.colour} end-category`;
+                // Extract difficulty number from colour class (gradient-1 -> 1)
+                const difficultyNum = cat.colour.replace('gradient-', '');
                 el.innerHTML = `
-                    <div class="solved-category-name"><span>${cat.name}</span></div>
-                    <div class="solved-category-words"><span>${cat.words.join(', ')}</span></div>
+                    <div class="solved-category-badge">${difficultyNum}</div>
+                    <div class="solved-category-content">
+                        <div class="solved-category-name"><span>${cat.name}</span></div>
+                        <div class="solved-category-words"><span>${cat.words.join(', ')}</span></div>
+                    </div>
                 `;
                 endCategories.appendChild(el);
 
@@ -4023,8 +4593,34 @@
             currentPuzzle = todayPuzzle;
             currentDate = todayPuzzle.date;
 
-            // Update landing page puzzle number
+            // Update landing page puzzle number and difficulty
             landingPuzzleNumber.textContent = `Puzzle #${puzzleNumber}`;
+
+            // Show difficulty badge if puzzle has difficulty set
+            const landingDifficulty = document.getElementById('landingDifficulty');
+            const landingAuthor = document.getElementById('landingAuthor');
+
+            if (currentPuzzle.difficulty) {
+                const difficultyLabels = {
+                    'easy': 'Easy',
+                    'medium': 'Medium',
+                    'hard': 'Hard',
+                    'very_hard': 'Very Hard'
+                };
+                const difficultyClass = currentPuzzle.difficulty.replace('_', '-');
+                landingDifficulty.textContent = difficultyLabels[currentPuzzle.difficulty] || currentPuzzle.difficulty;
+                landingDifficulty.className = `difficulty-badge ${difficultyClass}`;
+            } else {
+                landingDifficulty.classList.add('hidden');
+            }
+
+            // Show author attribution if user-submitted puzzle
+            if (currentPuzzle.is_user_submitted && currentPuzzle.author_name) {
+                landingAuthor.textContent = `Authored by ${currentPuzzle.author_name}`;
+                landingAuthor.classList.remove('hidden');
+            } else {
+                landingAuthor.classList.add('hidden');
+            }
 
             // Check if already played today
             const stats = getStats();
@@ -4138,6 +4734,190 @@
                 cachedLeaderboards = await fetchLeaderboards();
             }
         }
+
+        // ===== PUZZLE SUBMISSION =====
+        function initPuzzleSubmission() {
+            const submitPuzzleLink = document.getElementById('submitPuzzleLink');
+            const submitPuzzleBtn = document.getElementById('submitPuzzleBtn');
+            const submissionModal = document.getElementById('submissionModal');
+            const submissionForm = document.getElementById('submissionForm');
+            const submissionSuccess = document.getElementById('submissionSuccess');
+            const submissionError = document.getElementById('submissionError');
+            const submitPuzzleSubmit = document.getElementById('submitPuzzleSubmit');
+            const previewGrid = document.getElementById('previewGrid');
+
+            // Show submit button for authenticated users
+            function updateSubmitButtonVisibility() {
+                if (isAuthenticatedUser()) {
+                    submitPuzzleLink.classList.remove('hidden');
+                } else {
+                    submitPuzzleLink.classList.add('hidden');
+                }
+            }
+
+            // Initial check
+            updateSubmitButtonVisibility();
+
+            // Re-check when auth state changes
+            const originalUpdateAuthUI = updateAuthUI;
+            updateAuthUI = function() {
+                originalUpdateAuthUI();
+                updateSubmitButtonVisibility();
+            };
+
+            // Open submission modal
+            submitPuzzleBtn.addEventListener('click', () => {
+                // Pre-fill email if we have it
+                const email = currentUser?.email;
+                if (email) {
+                    document.getElementById('submissionEmail').value = email;
+                }
+                // Pre-fill name if we have it
+                if (playerName) {
+                    document.getElementById('submissionName').value = playerName;
+                }
+                // Reset form state
+                submissionForm.classList.remove('hidden');
+                submissionSuccess.classList.add('hidden');
+                submissionError.classList.add('hidden');
+                updatePreview();
+                openModal(submissionModal);
+            });
+
+            // Get all category inputs for preview updates
+            const allInputs = submissionModal.querySelectorAll('.submission-input');
+            allInputs.forEach(input => {
+                input.addEventListener('input', updatePreview);
+            });
+
+            // Update preview grid
+            function updatePreview() {
+                const words = [];
+                for (let cat = 1; cat <= 4; cat++) {
+                    for (let word = 1; word <= 4; word++) {
+                        const input = document.getElementById(`cat${cat}Word${word}`);
+                        words.push(input.value.trim().toUpperCase() || '—');
+                    }
+                }
+
+                // Shuffle for preview (same logic as game)
+                const shuffled = [...words].sort(() => Math.random() - 0.5);
+
+                previewGrid.innerHTML = shuffled.map(word => `
+                    <div class="preview-tile">${word}</div>
+                `).join('');
+            }
+
+            // Validate submission
+            function validateSubmission() {
+                const name = document.getElementById('submissionName').value.trim();
+                const email = document.getElementById('submissionEmail').value.trim();
+
+                if (!name) return 'Please enter your name';
+                if (!email) return 'Please enter your email';
+                if (!email.includes('@')) return 'Please enter a valid email';
+
+                const allWords = [];
+                for (let cat = 1; cat <= 4; cat++) {
+                    const title = document.getElementById(`cat${cat}Title`).value.trim();
+                    if (!title) return `Please enter a title for category ${cat}`;
+
+                    for (let word = 1; word <= 4; word++) {
+                        const wordValue = document.getElementById(`cat${cat}Word${word}`).value.trim().toUpperCase();
+                        if (!wordValue) return `Please enter all 4 words for category ${cat}`;
+                        if (allWords.includes(wordValue)) return `Duplicate word: "${wordValue}". All words must be unique.`;
+                        allWords.push(wordValue);
+                    }
+                }
+
+                return null; // Valid
+            }
+
+            // Build categories object
+            function buildCategories() {
+                const categories = [];
+                for (let cat = 1; cat <= 4; cat++) {
+                    const title = document.getElementById(`cat${cat}Title`).value.trim().toUpperCase();
+                    const words = [];
+                    for (let word = 1; word <= 4; word++) {
+                        words.push(document.getElementById(`cat${cat}Word${word}`).value.trim().toUpperCase());
+                    }
+                    categories.push({
+                        name: title,
+                        words: words,
+                        difficulty: cat
+                    });
+                }
+                return categories;
+            }
+
+            // Submit puzzle
+            submitPuzzleSubmit.addEventListener('click', async () => {
+                const error = validateSubmission();
+                if (error) {
+                    submissionError.textContent = error;
+                    submissionError.classList.remove('hidden');
+                    return;
+                }
+
+                submissionError.classList.add('hidden');
+                submitPuzzleSubmit.disabled = true;
+                submitPuzzleSubmit.textContent = 'Submitting...';
+
+                try {
+                    const name = document.getElementById('submissionName').value.trim();
+                    const email = document.getElementById('submissionEmail').value.trim();
+                    const categories = buildCategories();
+
+                    // Submit to Supabase
+                    const { data, error: dbError } = await db
+                        .from('puzzle_submissions')
+                        .insert({
+                            submitted_by: getCurrentUserId(),
+                            author_name: name,
+                            author_email: email,
+                            categories: categories,
+                            status: 'pending'
+                        })
+                        .select()
+                        .single();
+
+                    if (dbError) {
+                        throw new Error(dbError.message);
+                    }
+
+                    // Show success
+                    submissionForm.classList.add('hidden');
+                    submissionSuccess.classList.remove('hidden');
+
+                    // Clear form
+                    document.getElementById('submissionName').value = '';
+                    document.getElementById('submissionEmail').value = '';
+                    for (let cat = 1; cat <= 4; cat++) {
+                        document.getElementById(`cat${cat}Title`).value = '';
+                        for (let word = 1; word <= 4; word++) {
+                            document.getElementById(`cat${cat}Word${word}`).value = '';
+                        }
+                    }
+
+                } catch (err) {
+                    console.error('Submission error:', err);
+                    submissionError.textContent = 'Failed to submit puzzle. Please try again.';
+                    submissionError.classList.remove('hidden');
+                } finally {
+                    submitPuzzleSubmit.disabled = false;
+                    submitPuzzleSubmit.textContent = 'Submit Puzzle';
+                }
+            });
+
+            // Initialize preview
+            updatePreview();
+        }
+
+        // Call after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initPuzzleSubmission, 100);
+        });
 
         init();
     </script>
