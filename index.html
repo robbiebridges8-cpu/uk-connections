@@ -95,7 +95,10 @@
 
         .header-actions {
             display: flex;
-            gap: 8px;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            max-width: 60%;
         }
 
         .header-btn {
@@ -1127,6 +1130,15 @@
                 font-size: 1.25rem;
             }
 
+            .header-actions {
+                gap: 4px;
+            }
+
+            .header-btn {
+                padding: 6px 10px;
+                font-size: 0.7rem;
+            }
+
             .container {
                 padding: 0 12px 12px;
             }
@@ -1160,6 +1172,23 @@
         }
 
         @media (max-width: 360px) {
+            .header {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                width: 100%;
+                max-width: 100%;
+                justify-content: flex-start;
+            }
+
+            .header-btn {
+                padding: 6px 8px;
+                font-size: 0.65rem;
+            }
+
             .tile {
                 font-size: 0.6rem;
                 letter-spacing: 0.04em;
@@ -2666,12 +2695,15 @@
             }
         }
 
-        // Fetch archive (list of available puzzles)
+        // Fetch archive (list of available puzzles - only past/today, not future)
         async function fetchArchive() {
             try {
+                const today = getTodayString();
+
                 const { data: puzzles, error } = await db
                     .from('puzzles')
                     .select('date')
+                    .lte('date', today)
                     .order('date', { ascending: true });
 
                 if (error) {
