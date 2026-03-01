@@ -1551,8 +1551,11 @@
                 <button class="modal-btn" id="createLeagueSubmit">Create League</button>
             </div>
             <div class="league-url-container hidden" id="leagueUrlContainer">
-                <p id="leagueCreatedName" style="margin-bottom: 12px; font-weight: 600;"></p>
-                <div class="league-url-label">Share this link with your mates</div>
+                <p id="leagueCreatedName" style="margin-bottom: 16px; font-weight: 600;"></p>
+                <div class="league-url-label">Share this code with your mates</div>
+                <div class="league-code-display" id="leagueCodeDisplay" style="font-family: monospace; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.15em; background: rgba(255,255,255,0.1); padding: 16px 24px; border-radius: 12px; margin: 12px 0; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);"></div>
+                <button class="modal-btn" id="copyLeagueCode" style="margin-bottom: 8px;">Copy Code</button>
+                <div class="league-url-label" style="margin-top: 16px; font-size: 0.75rem; opacity: 0.6;">Or share this link</div>
                 <div class="league-url">
                     <input type="text" id="leagueUrlInput" readonly>
                     <button id="copyLeagueUrl">Copy</button>
@@ -1569,6 +1572,18 @@
             <p>Enter your display name to join this league.</p>
             <input type="text" class="modal-input" id="playerNameInput" placeholder="Your name" maxlength="30">
             <button class="modal-btn" id="joinLeagueSubmit">Join League</button>
+        </div>
+    </div>
+
+    <!-- Join League by Code Modal -->
+    <div class="modal-overlay" id="joinByCodeModal">
+        <div class="modal">
+            <button class="modal-close" aria-label="Close">&times;</button>
+            <h2>Join a League</h2>
+            <p>Enter the league code shared by your friend.</p>
+            <input type="text" class="modal-input" id="leagueCodeInput" placeholder="Enter code (e.g. a1b2c3d4)" maxlength="8" style="text-transform: lowercase; font-family: monospace; font-size: 1.1rem; letter-spacing: 0.1em; text-align: center;">
+            <div class="modal-error hidden" id="joinByCodeError" style="color: #ff6b6b; font-size: 0.85rem; margin-bottom: 12px;"></div>
+            <button class="modal-btn" id="joinByCodeSubmit">Join League</button>
         </div>
     </div>
 
@@ -1618,8 +1633,10 @@
         <div class="player-rankings hidden" id="playerRankings">
             <!-- Shows player's rank in each league -->
         </div>
-        <div class="buttons-area">
+        <div class="buttons-area" id="endScreenButtons">
             <button class="btn btn-secondary hidden" id="viewLeaguesBtn">View Leagues</button>
+            <button class="btn btn-secondary hidden" id="createLeagueBtnEnd">Create League</button>
+            <button class="btn btn-secondary hidden" id="joinLeagueBtnEnd">Join League</button>
             <button class="btn btn-primary" id="shareBtn">Share Result</button>
         </div>
         <div class="countdown-section">
@@ -3020,12 +3037,28 @@
                 }, i * 150);
             });
 
-            // Show View Leagues button if player has leagues
+            // Show league buttons based on auth status and league membership
             const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
-            if (cachedLeaderboards.length > 0) {
-                viewLeaguesBtn.classList.remove('hidden');
+            const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
+            const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
+
+            if (isAuthenticatedUser()) {
+                if (cachedLeaderboards.length > 0) {
+                    // Has leagues - show View Leagues
+                    viewLeaguesBtn.classList.remove('hidden');
+                    createLeagueBtnEnd.classList.add('hidden');
+                    joinLeagueBtnEnd.classList.add('hidden');
+                } else {
+                    // No leagues - show Create/Join
+                    viewLeaguesBtn.classList.add('hidden');
+                    createLeagueBtnEnd.classList.remove('hidden');
+                    joinLeagueBtnEnd.classList.remove('hidden');
+                }
             } else {
+                // Not signed in - hide all league buttons
                 viewLeaguesBtn.classList.add('hidden');
+                createLeagueBtnEnd.classList.add('hidden');
+                joinLeagueBtnEnd.classList.add('hidden');
             }
 
             // Show auth prompt on end screen
@@ -3366,12 +3399,23 @@
                     }
 
                     const league = await createLeague(name);
+                    document.getElementById('leagueCodeDisplay').textContent = league.id.toUpperCase();
                     leagueUrlInput.value = league.url;
                     leagueCreatedName.textContent = `"${name}" created!`;
                     createLeagueForm.classList.add('hidden');
                     leagueUrlContainer.classList.remove('hidden');
                     createLeagueTitle.textContent = 'League Created';
                     await renderLeagueWidget();
+
+                    // Update end screen buttons to show View Leagues
+                    await fetchPlayerLeagues();
+                    cachedLeaderboards = await fetchLeaderboards();
+                    const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
+                    const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
+                    const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
+                    viewLeaguesBtn.classList.remove('hidden');
+                    createLeagueBtnEnd.classList.add('hidden');
+                    joinLeagueBtnEnd.classList.add('hidden');
                 } catch (error) {
                     showToast('Failed to create league');
                 } finally {
@@ -3385,6 +3429,90 @@
                     showToast('Link copied!');
                 } catch {
                     showToast('Could not copy');
+                }
+            });
+
+            // Copy league code
+            document.getElementById('copyLeagueCode').addEventListener('click', async () => {
+                const code = document.getElementById('leagueCodeDisplay').textContent;
+                try {
+                    await navigator.clipboard.writeText(code);
+                    showToast('Code copied!');
+                } catch {
+                    showToast('Could not copy');
+                }
+            });
+
+            // End screen Create League button
+            document.getElementById('createLeagueBtnEnd').addEventListener('click', () => {
+                resetCreateLeagueModal();
+                openModal(createLeagueModal);
+            });
+
+            // End screen Join League button
+            const joinByCodeModal = document.getElementById('joinByCodeModal');
+            const leagueCodeInput = document.getElementById('leagueCodeInput');
+            const joinByCodeSubmit = document.getElementById('joinByCodeSubmit');
+            const joinByCodeError = document.getElementById('joinByCodeError');
+
+            document.getElementById('joinLeagueBtnEnd').addEventListener('click', () => {
+                leagueCodeInput.value = '';
+                joinByCodeError.classList.add('hidden');
+                joinByCodeError.textContent = '';
+                openModal(joinByCodeModal);
+            });
+
+            joinByCodeSubmit.addEventListener('click', async () => {
+                const code = leagueCodeInput.value.trim().toLowerCase();
+                if (!code) return;
+
+                joinByCodeSubmit.disabled = true;
+                joinByCodeError.classList.add('hidden');
+
+                try {
+                    // Check if league exists
+                    const { data: league, error } = await db
+                        .from('leagues')
+                        .select('*')
+                        .eq('id', code)
+                        .single();
+
+                    if (error || !league) {
+                        joinByCodeError.textContent = 'League not found. Check the code and try again.';
+                        joinByCodeError.classList.remove('hidden');
+                        return;
+                    }
+
+                    // Join the league
+                    await joinLeague(code);
+                    closeModal(joinByCodeModal);
+                    showToast(`Joined ${league.name}!`);
+
+                    // Refresh leagues and update UI
+                    await fetchPlayerLeagues();
+                    cachedLeaderboards = await fetchLeaderboards();
+                    renderPlayerRankings(cachedLeaderboards);
+
+                    // Update buttons
+                    const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
+                    const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
+                    const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
+                    viewLeaguesBtn.classList.remove('hidden');
+                    createLeagueBtnEnd.classList.add('hidden');
+                    joinLeagueBtnEnd.classList.add('hidden');
+
+                } catch (error) {
+                    console.error('Join by code error:', error);
+                    joinByCodeError.textContent = 'Failed to join league. Try again.';
+                    joinByCodeError.classList.remove('hidden');
+                } finally {
+                    joinByCodeSubmit.disabled = false;
+                }
+            });
+
+            leagueCodeInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    joinByCodeSubmit.click();
                 }
             });
 
@@ -3411,6 +3539,7 @@
                             const league = await createLeague(leagueName);
                             closeModal(joinLeagueModal);
                             openModal(createLeagueModal);
+                            document.getElementById('leagueCodeDisplay').textContent = league.id.toUpperCase();
                             leagueUrlInput.value = league.url;
                             leagueCreatedName.textContent = `"${leagueName}" created!`;
                             createLeagueForm.classList.add('hidden');
