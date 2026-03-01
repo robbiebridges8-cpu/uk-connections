@@ -1566,7 +1566,7 @@
         <div class="landing-page" id="landingPage">
             <div class="landing-content">
                 <h1 class="landing-title">Connections UK</h1>
-                <p class="landing-subtitle">Find the four groups of four words. Easier said than done.</p>
+                <p class="landing-subtitle">The game you know and love, without the Americanisms.</p>
 
                 <div class="landing-welcome hidden" id="landingWelcome">
                     <p>Welcome back, <span id="landingPlayerName"></span>!</p>
@@ -1813,6 +1813,42 @@
         const SUPABASE_ANON_KEY = 'NETLIFY_SUPABASE_ANON_KEY';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // ===== ONE-TIME DATA RESET (remove after confirming reset) =====
+        (function oneTimeDataReset() {
+            const RESET_FLAG = 'data-reset-2024-v1';
+            if (localStorage.getItem(RESET_FLAG)) {
+                return; // Already reset
+            }
+
+            console.log('Performing one-time localStorage reset...');
+
+            // Clear all game-related localStorage keys
+            const keysToRemove = [
+                'player-name',
+                'linked-stats',
+                'pendingGameState',
+                'cached-puzzle'
+            ];
+
+            keysToRemove.forEach(key => {
+                localStorage.removeItem(key);
+                console.log(`  Removed: ${key}`);
+            });
+
+            // Clear Supabase auth tokens (keys starting with sb-)
+            const allKeys = Object.keys(localStorage);
+            allKeys.forEach(key => {
+                if (key.startsWith('sb-')) {
+                    localStorage.removeItem(key);
+                    console.log(`  Removed Supabase key: ${key}`);
+                }
+            });
+
+            // Set flag to prevent running again
+            localStorage.setItem(RESET_FLAG, 'true');
+            console.log('localStorage reset complete!');
+        })();
+
         // ===== STATE =====
         let currentPuzzle = null;
         let currentDate = null; // The date of the puzzle being played
@@ -1891,6 +1927,11 @@
         const welcomeSubmit = document.getElementById('welcomeSubmit');
 
         // ===== AUTH FUNCTIONS =====
+        // Auth state flags
+        let authResolved = false;
+        let returningFromMagicLink = false;
+        let needsDisplayNamePrompt = false;
+
         function getCurrentUserId() {
             return currentUser?.id || null;
         }
@@ -1903,190 +1944,193 @@
             return currentUser && !currentUser.is_anonymous;
         }
 
-        async function initAuth() {
-            console.log(`[${new Date().toISOString()}] initAuth started`);
+        // Blocking auth resolution - must complete before ANY UI renders
+        async function resolveAuthState() {
+            console.log('[Auth] resolveAuthState started');
 
-            // Check for auth errors in URL hash first
+            // 1. Check for auth errors in URL hash first
             const hashError = checkAuthHashError();
             if (hashError) {
-                // Show error to user with resend option
                 showAuthError(hashError);
+                // Continue to try getting session anyway
             }
 
-            // Handle PKCE code exchange (used when returning from magic link with ?code= param)
+            // 2. Handle PKCE code exchange if returning from magic link
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
 
             if (code) {
-                console.log(`[${new Date().toISOString()}] Exchanging code for session`);
+                console.log('[Auth] Magic link code detected, exchanging for session');
+                returningFromMagicLink = true;
+
                 try {
                     const { data, error } = await db.auth.exchangeCodeForSession(code);
                     if (error) {
-                        console.error(`[${new Date().toISOString()}] Code exchange error:`, error);
-                        showAuthError('Failed to complete sign in. The link may have expired. Please request a new magic link.');
-                    } else {
-                        console.log(`[${new Date().toISOString()}] Code exchange successful`);
-                        // Clear URL params
+                        console.error('[Auth] Code exchange error:', error);
+                        showAuthError('This magic link has expired or is invalid. Please request a new one.');
+                        // Clear URL and fall through to anonymous auth
                         window.history.replaceState({}, '', window.location.pathname);
+                    } else {
+                        console.log('[Auth] Code exchange successful');
+                        window.history.replaceState({}, '', window.location.pathname);
+
+                        // Set the user immediately
+                        currentUser = data.user;
+
+                        // Process pending game state
+                        await processPendingGameState();
+
+                        // Check if user needs display name
+                        if (!playerName) {
+                            needsDisplayNamePrompt = true;
+                        }
+
+                        return { success: true, user: currentUser };
                     }
                 } catch (e) {
-                    console.error(`[${new Date().toISOString()}] Code exchange exception:`, e);
+                    console.error('[Auth] Code exchange exception:', e);
                     showAuthError('Failed to complete sign in. Please try again.');
+                    window.history.replaceState({}, '', window.location.pathname);
                 }
             }
 
-            // Listen for auth state changes
-            // This will fire when Supabase processes tokens from the URL (magic link, OAuth, etc.)
-            db.auth.onAuthStateChange(async (event, session) => {
-                console.log(`[${new Date().toISOString()}] Auth state changed:`, event, session?.user?.id, session?.user?.is_anonymous);
-
-                const wasAnonymous = currentUser?.is_anonymous;
-                const wasNull = currentUser === null;
-                currentUser = session?.user || null;
-
-                // Update UI based on auth state
-                updateAuthUI();
-
-                // Clean up URL after successful authentication (magic link tokens in hash)
-                if (event === 'SIGNED_IN' && currentUser && !currentUser.is_anonymous) {
-                    if (window.location.hash) {
-                        window.history.replaceState({}, '', window.location.pathname);
-                    }
-                }
-
-                // If user just upgraded from anonymous to authenticated, or just signed in
-                if ((wasAnonymous || wasNull) && currentUser && !currentUser.is_anonymous) {
-                    console.log('User is now authenticated');
-
-                    // Check for pending game state from magic link flow
-                    const pendingState = localStorage.getItem('pendingGameState');
-                    if (pendingState) {
-                        const state = JSON.parse(pendingState);
-                        console.log('Found pending game state:', state);
-
-                        // Migrate score from anonymous user to authenticated user
-                        if (state.anonymousUserId && state.anonymousUserId !== currentUser.id) {
-                            await migrateAnonymousScores(state.anonymousUserId, currentUser.id);
-                        }
-
-                        // Ensure the game result is in stats (belt and suspenders)
-                        if (state.date && state.completed) {
-                            const stats = getStats();
-                            if (!stats.played[state.date]) {
-                                stats.played[state.date] = {
-                                    won: state.won,
-                                    mistakes: state.mistakes,
-                                    guessHistory: state.guessHistory || []
-                                };
-                                saveStats(stats);
-                            }
-                        }
-
-                        localStorage.removeItem('pendingGameState');
-
-                        // Set flag to indicate we came from magic link with completed game
-                        window.restoringFromMagicLink = true;
-
-                        // Skip welcome modal, just show toast
-                        showToast('Signed in successfully!');
-                        sessionStorage.removeItem('pendingAuthAction');
-                        return;
-                    }
-
-                    await handlePostAuthFlow();
-                }
-            });
-
-            // Check for existing session
+            // 3. Check for existing session
             const { data: { session } } = await db.auth.getSession();
-            console.log('Initial session check:', session?.user?.id, session?.user?.is_anonymous);
+            console.log('[Auth] Session check:', session?.user?.id, session?.user?.is_anonymous);
 
             if (session?.user) {
                 currentUser = session.user;
-                updateAuthUI();
 
-                // Check for pending game state from magic link flow (may not trigger onAuthStateChange)
-                const pendingState = localStorage.getItem('pendingGameState');
-                if (!currentUser.is_anonymous && pendingState) {
-                    const state = JSON.parse(pendingState);
-                    console.log('Found pending game state on session init:', state);
-
-                    // Migrate score from anonymous user to authenticated user
-                    if (state.anonymousUserId && state.anonymousUserId !== currentUser.id) {
-                        await migrateAnonymousScores(state.anonymousUserId, currentUser.id);
-                    }
-
-                    // Ensure the game result is in stats
-                    if (state.date && state.completed) {
-                        const stats = getStats();
-                        if (!stats.played[state.date]) {
-                            stats.played[state.date] = {
-                                won: state.won,
-                                mistakes: state.mistakes,
-                                guessHistory: state.guessHistory || []
-                            };
-                            saveStats(stats);
+                // If authenticated and has pending game state (e.g. page was refreshed)
+                if (!currentUser.is_anonymous) {
+                    const pendingState = localStorage.getItem('pendingGameState');
+                    if (pendingState) {
+                        returningFromMagicLink = true;
+                        await processPendingGameState();
+                        if (!playerName) {
+                            needsDisplayNamePrompt = true;
                         }
                     }
+                }
 
-                    localStorage.removeItem('pendingGameState');
-                    window.restoringFromMagicLink = true;
-                    sessionStorage.removeItem('pendingAuthAction');
-                    showToast('Signed in successfully!');
-                } else if (!currentUser.is_anonymous && sessionStorage.getItem('pendingAuthAction')) {
-                    // If authenticated and has pending action, handle it now
-                    console.log('Authenticated user with pending action');
-                    await handlePostAuthFlow();
-                } else if (!currentUser.is_anonymous && playerName) {
-                    // Welcome back message for returning authenticated users
-                    showToast(`Welcome back, ${playerName}!`);
+                return { success: true, user: currentUser };
+            }
+
+            // 4. No session - sign in anonymously
+            console.log('[Auth] No session, signing in anonymously');
+            const { data, error } = await db.auth.signInAnonymously();
+            if (error) {
+                console.error('[Auth] Anonymous auth error:', error);
+                return { success: false, error };
+            }
+
+            currentUser = data.user;
+            return { success: true, user: currentUser };
+        }
+
+        // Process any pending game state from magic link flow
+        async function processPendingGameState() {
+            const pendingState = localStorage.getItem('pendingGameState');
+            if (!pendingState) return;
+
+            try {
+                const state = JSON.parse(pendingState);
+                console.log('[Auth] Processing pending game state:', state);
+
+                // Migrate scores from anonymous user
+                if (state.anonymousUserId && state.anonymousUserId !== currentUser.id) {
+                    await migrateAnonymousScores(state.anonymousUserId, currentUser.id);
                 }
-            } else {
-                // No session, sign in anonymously
-                console.log('No session, signing in anonymously');
-                const { data, error } = await db.auth.signInAnonymously();
-                if (error) {
-                    console.error('Anonymous auth error:', error);
-                } else {
-                    currentUser = data.user;
-                    updateAuthUI();
+
+                // Restore game result to stats
+                if (state.date && state.completed) {
+                    const stats = getStats();
+                    if (!stats.played[state.date]) {
+                        stats.played[state.date] = {
+                            won: state.won,
+                            mistakes: state.mistakes,
+                            guessHistory: state.guessHistory || []
+                        };
+                        saveStats(stats);
+                        console.log('[Auth] Game state restored to stats');
+                    }
                 }
+
+                localStorage.removeItem('pendingGameState');
+                sessionStorage.removeItem('pendingAuthAction');
+            } catch (e) {
+                console.error('[Auth] Error processing pending game state:', e);
+                localStorage.removeItem('pendingGameState');
+            }
+        }
+
+        // Set up auth state change listener for future changes (sign out, token refresh, etc.)
+        function setupAuthListener() {
+            db.auth.onAuthStateChange(async (event, session) => {
+                console.log('[Auth] State changed:', event, session?.user?.id);
+
+                const previousUser = currentUser;
+                currentUser = session?.user || null;
+
+                // Update UI
+                updateAuthUI();
+
+                // Clean up URL hash if present
+                if (event === 'SIGNED_IN' && window.location.hash) {
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+
+                // Handle upgrade from anonymous to authenticated (happens during session, not page load)
+                if (previousUser?.is_anonymous && currentUser && !currentUser.is_anonymous) {
+                    console.log('[Auth] User upgraded from anonymous to authenticated');
+                    await processPendingGameState();
+
+                    if (!playerName) {
+                        // Show display name modal
+                        const modal = document.getElementById('welcomeModal');
+                        if (modal) {
+                            openModal(modal);
+                        }
+                    } else {
+                        showToast('Signed in successfully!');
+                        await handlePendingAuthAction();
+                    }
+                }
+            });
+        }
+
+        // Show display name modal if needed after magic link return
+        async function showDisplayNameModalIfNeeded() {
+            if (!needsDisplayNamePrompt) return;
+            needsDisplayNamePrompt = false;
+
+            console.log('[Auth] Showing display name modal');
+            const modal = document.getElementById('welcomeModal');
+            if (modal) {
+                openModal(modal);
             }
         }
 
         async function handlePostAuthFlow() {
-            console.log('handlePostAuthFlow called');
+            console.log('[Auth] handlePostAuthFlow called');
 
             // Check for pending action from sessionStorage
             const storedAction = sessionStorage.getItem('pendingAuthAction');
             if (storedAction) {
-                console.log('Found pending action:', storedAction);
+                console.log('[Auth] Found pending action:', storedAction);
                 sessionStorage.removeItem('pendingAuthAction');
                 pendingAuthAction = JSON.parse(storedAction);
             }
 
             // If user doesn't have a display name, show welcome modal
             if (!playerName) {
-                console.log('No player name, showing welcome modal');
+                console.log('[Auth] No player name, showing welcome modal');
                 const modal = document.getElementById('welcomeModal');
                 if (modal) {
                     openModal(modal);
-                } else {
-                    console.error('Welcome modal not found!');
-                    // Fallback: just show a prompt
-                    const name = prompt('Welcome! Enter your display name:');
-                    if (name) {
-                        setPlayerName(name);
-                        const userId = getCurrentUserId();
-                        if (userId) {
-                            await db.from('players').upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
-                        }
-                        await handlePendingAuthAction();
-                    }
                 }
             } else {
                 // Has display name, handle pending action directly
-                console.log('Has player name, handling pending action');
                 await handlePendingAuthAction();
             }
         }
@@ -3588,8 +3632,10 @@
 
         // ===== INIT =====
         async function init() {
-            // Initialize auth FIRST (especially important when returning from magic link)
-            await initAuth();
+            // Resolve auth state FIRST - this MUST complete before any UI renders
+            await resolveAuthState();
+            setupAuthListener();
+            updateAuthUI();
 
             // Event listeners
             submitBtn.addEventListener('click', handleSubmit);
@@ -3914,6 +3960,11 @@
                         await db.from('players').upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
                     }
                     closeModal(welcomeModal);
+
+                    // Update landing page welcome message
+                    landingPlayerName.textContent = name;
+                    landingWelcome.classList.remove('hidden');
+
                     await renderLeagueWidget();
                     // Handle any pending action
                     await handlePendingAuthAction();
@@ -4039,6 +4090,19 @@
             // Hide loading, show landing page
             loadingEl.classList.add('hidden');
             landingPage.classList.remove('hidden');
+
+            // Handle post-auth messaging
+            if (returningFromMagicLink) {
+                // Just returned from magic link
+                showToast('Signed in successfully!');
+                // Show display name modal after a brief delay if needed
+                if (needsDisplayNamePrompt) {
+                    setTimeout(() => showDisplayNameModalIfNeeded(), 500);
+                }
+            } else if (isAuthenticatedUser() && playerName) {
+                // Returning authenticated user
+                showToast(`Welcome back, ${playerName}!`);
+            }
 
             // Start game when Play is clicked
             async function startGame() {
