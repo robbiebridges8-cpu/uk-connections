@@ -31,7 +31,7 @@
             --category-2: #6CC66C;  /* Easy - green */
             --category-3: #36DFE7;  /* Hard - cyan */
             --category-4: #7E4E7E;  /* Hardest - purple */
-            --category-text-light: #1a1a1a;  /* Dark text for light backgrounds */
+            --category-text-light: #000000;  /* Black text for light backgrounds */
             --category-text-dark: #ffffff;   /* Light text for dark backgrounds */
         }
 
@@ -244,7 +244,6 @@
         .solved-category-words {
             font-size: 0.8rem;
             font-weight: 400;
-            opacity: 0.85;
             letter-spacing: 0.02em;
             color: inherit;
             overflow: visible;
@@ -353,7 +352,10 @@
             flex-wrap: wrap;
             margin-top: auto;
             padding-top: 20px;
+            padding-bottom: 20px;
             width: 100%;
+            position: relative;
+            z-index: 100;
         }
 
         .btn {
@@ -403,9 +405,11 @@
 
         .submit-btn {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(10px);
             pointer-events: none;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            z-index: 101;
         }
 
         .submit-btn.visible {
@@ -1115,6 +1119,116 @@
             color: var(--text-secondary);
         }
 
+        /* Landing page */
+        .landing-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+            min-height: 60vh;
+        }
+
+        .landing-page.hidden {
+            display: none;
+        }
+
+        .landing-content {
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .landing-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .landing-subtitle {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+
+        .landing-welcome {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .landing-welcome p {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .landing-leagues {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .landing-league-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .landing-league-item:last-child {
+            border-bottom: none;
+        }
+
+        .landing-league-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .landing-league-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .landing-completed {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .landing-completed-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .landing-completed-result {
+            font-size: 1.5rem;
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .landing-play-btn {
+            font-size: 1.1rem;
+            padding: 16px 48px;
+            margin-bottom: 24px;
+        }
+
+        .landing-puzzle-number {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
         /* Hidden utility */
         .hidden {
             display: none !important;
@@ -1448,6 +1562,32 @@
             <p>Check back tomorrow for a new challenge.</p>
         </div>
 
+        <!-- Landing page -->
+        <div class="landing-page" id="landingPage">
+            <div class="landing-content">
+                <h1 class="landing-title">Connections UK</h1>
+                <p class="landing-subtitle">Find the four groups of four words. Easier said than done.</p>
+
+                <div class="landing-welcome hidden" id="landingWelcome">
+                    <p>Welcome back, <span id="landingPlayerName"></span>!</p>
+                </div>
+
+                <div class="landing-leagues hidden" id="landingLeagues">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <div class="landing-completed hidden" id="landingCompleted">
+                    <p class="landing-completed-title">You've completed today's puzzle!</p>
+                    <div class="landing-completed-result" id="landingCompletedResult"></div>
+                    <button class="btn btn-primary" id="viewResultBtn">View Result</button>
+                </div>
+
+                <button class="btn btn-primary landing-play-btn" id="playBtn">Play</button>
+
+                <p class="landing-puzzle-number" id="landingPuzzleNumber"></p>
+            </div>
+        </div>
+
         <!-- League widget -->
         <div class="league-widget hidden" id="leagueWidget">
             <div class="league-widget-header">
@@ -1764,28 +1904,41 @@
         }
 
         async function initAuth() {
+            console.log(`[${new Date().toISOString()}] initAuth started`);
+
+            // Check for auth errors in URL hash first
+            const hashError = checkAuthHashError();
+            if (hashError) {
+                // Show error to user with resend option
+                showAuthError(hashError);
+            }
+
             // Handle PKCE code exchange (used when returning from magic link with ?code= param)
             const urlParams = new URLSearchParams(window.location.search);
             const code = urlParams.get('code');
 
             if (code) {
+                console.log(`[${new Date().toISOString()}] Exchanging code for session`);
                 try {
                     const { data, error } = await db.auth.exchangeCodeForSession(code);
                     if (error) {
-                        console.error('Code exchange error:', error);
+                        console.error(`[${new Date().toISOString()}] Code exchange error:`, error);
+                        showAuthError('Failed to complete sign in. The link may have expired. Please request a new magic link.');
                     } else {
+                        console.log(`[${new Date().toISOString()}] Code exchange successful`);
                         // Clear URL params
                         window.history.replaceState({}, '', window.location.pathname);
                     }
                 } catch (e) {
-                    console.error('Code exchange exception:', e);
+                    console.error(`[${new Date().toISOString()}] Code exchange exception:`, e);
+                    showAuthError('Failed to complete sign in. Please try again.');
                 }
             }
 
             // Listen for auth state changes
             // This will fire when Supabase processes tokens from the URL (magic link, OAuth, etc.)
             db.auth.onAuthStateChange(async (event, session) => {
-                console.log('Auth state changed:', event, session?.user?.id, session?.user?.is_anonymous);
+                console.log(`[${new Date().toISOString()}] Auth state changed:`, event, session?.user?.id, session?.user?.is_anonymous);
 
                 const wasAnonymous = currentUser?.is_anonymous;
                 const wasNull = currentUser === null;
@@ -2052,14 +2205,22 @@
                     sessionStorage.setItem('pendingAuthAction', JSON.stringify({ type: 'welcome' }));
                 }
 
+                const redirectUrl = 'https://www.playconnectionsuk.co.uk';
+                console.log(`[${new Date().toISOString()}] Sending magic link to ${email}, redirect: ${redirectUrl}`);
+
                 const { error } = await db.auth.signInWithOtp({
                     email,
                     options: {
-                        emailRedirectTo: window.location.origin
+                        emailRedirectTo: redirectUrl
                     }
                 });
 
-                if (error) throw error;
+                if (error) {
+                    console.error(`[${new Date().toISOString()}] Magic link OTP error:`, error);
+                    throw error;
+                }
+
+                console.log(`[${new Date().toISOString()}] Magic link sent successfully to ${email}`);
 
                 // Show success
                 if (isModal) {
@@ -2071,13 +2232,114 @@
                 successEl.classList.remove('hidden');
 
             } catch (error) {
-                console.error('Magic link error:', error);
-                errorEl.textContent = error.message || 'Failed to send magic link';
+                console.error(`[${new Date().toISOString()}] Magic link error:`, error);
+
+                // Provide specific error messages
+                let errorMessage = 'Failed to send magic link';
+                if (error.message) {
+                    if (error.message.includes('rate limit') || error.message.includes('too many')) {
+                        errorMessage = 'Too many requests. Please wait a few minutes before trying again.';
+                    } else if (error.message.includes('invalid') && error.message.includes('email')) {
+                        errorMessage = 'Please enter a valid email address.';
+                    } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                        errorMessage = 'Network error. Please check your connection and try again.';
+                    } else {
+                        errorMessage = error.message;
+                    }
+                }
+
+                errorEl.textContent = errorMessage;
                 errorEl.classList.remove('hidden');
             } finally {
                 btnEl.disabled = false;
                 btnEl.textContent = 'Send Link';
             }
+        }
+
+        // Check for auth errors in URL hash on page load
+        function checkAuthHashError() {
+            const hash = window.location.hash;
+            if (!hash) return null;
+
+            const params = new URLSearchParams(hash.substring(1));
+            const error = params.get('error');
+            const errorDescription = params.get('error_description');
+
+            if (error) {
+                console.error(`[${new Date().toISOString()}] Auth hash error:`, error, errorDescription);
+
+                let message = 'Sign in failed';
+                if (error === 'access_denied') {
+                    if (errorDescription?.includes('expired')) {
+                        message = 'This magic link has expired. Please request a new one.';
+                    } else if (errorDescription?.includes('invalid')) {
+                        message = 'This magic link is invalid. Please request a new one.';
+                    } else {
+                        message = errorDescription || 'Access denied. Please try again.';
+                    }
+                } else if (error === 'server_error') {
+                    message = 'Server error. Please try again later.';
+                } else if (errorDescription) {
+                    message = errorDescription;
+                }
+
+                // Clean up URL
+                window.history.replaceState({}, '', window.location.pathname);
+
+                return message;
+            }
+
+            return null;
+        }
+
+        // Show auth error with resend option
+        function showAuthError(message) {
+            // Create or update error toast that persists
+            const existingError = document.getElementById('authErrorBanner');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            const banner = document.createElement('div');
+            banner.id = 'authErrorBanner';
+            banner.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #ff4444;
+                color: white;
+                padding: 16px 20px;
+                text-align: center;
+                z-index: 3000;
+                font-size: 0.9rem;
+            `;
+            banner.innerHTML = `
+                <div style="margin-bottom: 8px;">${message}</div>
+                <button id="resendMagicLinkBtn" style="background: white; color: #ff4444; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; margin-right: 8px;">Request New Link</button>
+                <button id="dismissAuthError" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 20px; cursor: pointer;">Dismiss</button>
+            `;
+
+            document.body.prepend(banner);
+
+            document.getElementById('dismissAuthError').addEventListener('click', () => {
+                banner.remove();
+            });
+
+            document.getElementById('resendMagicLinkBtn').addEventListener('click', () => {
+                banner.remove();
+                // Scroll to and focus the email input
+                const emailInput = document.getElementById('authPromptEmail');
+                if (emailInput) {
+                    emailInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => emailInput.focus(), 300);
+                }
+                // Or open the auth modal
+                const authModal = document.getElementById('authRequiredModal');
+                if (authModal) {
+                    openModal(authModal);
+                }
+            });
         }
 
         async function signOut() {
@@ -2859,11 +3121,12 @@
                 return selectedWords.every(w => cat.words.includes(w));
             });
 
-            if (categoryIndex !== -1) {
-                guessHistory.push(categoryIndex);
-            } else {
-                guessHistory.push(-1);
-            }
+            // Store the category index for each selected word (for share grid)
+            const guessCategories = selectedWords.map(word => {
+                const catIndex = currentPuzzle.categories.findIndex(cat => cat.words.includes(word));
+                return catIndex;
+            });
+            guessHistory.push(guessCategories);
 
             const result = checkGuess();
 
@@ -3089,16 +3352,30 @@
             const emoji = result.won ? (result.mistakes === 0 ? '🏆' : '✅') : '❌';
 
             let grid = '';
+            const solvedCategoryIndices = [];
             for (const guess of result.guessHistory) {
-                if (guess >= 0) {
-                    grid += SHARE_EMOJIS[guess].repeat(4) + '\n';
-                } else {
-                    grid += '⬛⬛⬛⬛\n';
+                // Each guess is now an array of 4 category indices
+                if (Array.isArray(guess)) {
+                    // Check if all 4 are the same (correct guess)
+                    const isCorrect = guess.every(g => g === guess[0]);
+                    if (isCorrect) {
+                        solvedCategoryIndices.push(guess[0]);
+                    }
+                    // Build the row with each word's category emoji
+                    grid += guess.map(catIndex => SHARE_EMOJIS[catIndex] || '⬛').join('') + '\n';
+                } else if (typeof guess === 'number') {
+                    // Legacy format: single number (category index or -1)
+                    if (guess >= 0) {
+                        solvedCategoryIndices.push(guess);
+                        grid += SHARE_EMOJIS[guess].repeat(4) + '\n';
+                    } else {
+                        grid += '⬛⬛⬛⬛\n';
+                    }
                 }
             }
-            // Add remaining solved categories if won
-            if (result.won && result.guessHistory.length < 4) {
-                const remaining = [0, 1, 2, 3].filter(i => !result.guessHistory.includes(i));
+            // Add remaining solved categories if won (categories solved after last wrong guess)
+            if (result.won && solvedCategoryIndices.length < 4) {
+                const remaining = [0, 1, 2, 3].filter(i => !solvedCategoryIndices.includes(i));
                 for (const i of remaining) {
                     grid += SHARE_EMOJIS[i].repeat(4) + '\n';
                 }
@@ -3191,9 +3468,15 @@
 
                 let statusHTML = '';
                 if (played) {
-                    const resultEmojis = played.guessHistory.map(g =>
-                        g >= 0 ? SHARE_EMOJIS[g] : '⬛'
-                    ).join('');
+                    const resultEmojis = played.guessHistory.map(g => {
+                        if (Array.isArray(g)) {
+                            // New format: array of category indices
+                            const isCorrect = g.every(idx => idx === g[0]);
+                            return isCorrect ? SHARE_EMOJIS[g[0]] : '🔀';
+                        }
+                        // Legacy format
+                        return g >= 0 ? SHARE_EMOJIS[g] : '⬛';
+                    }).join('');
                     statusHTML = `
                         <div class="archive-item-result"><span>${resultEmojis}</span></div>
                         <span class="archive-item-badge ${played.won ? 'won' : 'lost'}">${played.won ? 'Won' : 'Lost'}</span>
@@ -3664,47 +3947,126 @@
 
             updateStatsDisplay();
 
+            // Landing page elements
+            const landingPage = document.getElementById('landingPage');
+            const playBtn = document.getElementById('playBtn');
+            const viewResultBtn = document.getElementById('viewResultBtn');
+            const landingWelcome = document.getElementById('landingWelcome');
+            const landingPlayerName = document.getElementById('landingPlayerName');
+            const landingLeagues = document.getElementById('landingLeagues');
+            const landingCompleted = document.getElementById('landingCompleted');
+            const landingCompletedResult = document.getElementById('landingCompletedResult');
+            const landingPuzzleNumber = document.getElementById('landingPuzzleNumber');
+
             // Fetch today's puzzle (or test date if ?date= param present)
             const todayPuzzle = await fetchTodayPuzzle();
 
             if (!todayPuzzle) {
                 loadingEl.classList.add('hidden');
+                landingPage.classList.add('hidden');
                 noPuzzleEl.classList.remove('hidden');
                 shuffleBtn.classList.add('hidden');
                 return;
             }
 
             currentPuzzle = todayPuzzle;
-            currentDate = todayPuzzle.date; // Use the puzzle's actual date
+            currentDate = todayPuzzle.date;
 
-            // Check if already played
+            // Update landing page puzzle number
+            landingPuzzleNumber.textContent = `Puzzle #${puzzleNumber}`;
+
+            // Check if already played today
             const stats = getStats();
-            if (stats.played[currentDate]) {
-                loadingEl.classList.add('hidden');
-                gameAreaEl.classList.remove('hidden');
-                restoreCompletedGame(currentDate);
-                return;
+            const hasPlayedToday = stats.played[currentDate];
+
+            // Set up landing page based on user state
+            async function setupLandingPage() {
+                // Show welcome message if authenticated
+                if (isAuthenticatedUser() && playerName) {
+                    landingPlayerName.textContent = playerName;
+                    landingWelcome.classList.remove('hidden');
+                } else {
+                    landingWelcome.classList.add('hidden');
+                }
+
+                // Show leagues if user has any
+                if (isAuthenticatedUser()) {
+                    await fetchPlayerLeagues();
+                    if (playerLeagues.length > 0) {
+                        const today = getTodayString();
+                        landingLeagues.innerHTML = playerLeagues.map(league => `
+                            <div class="landing-league-item">
+                                <span class="landing-league-name">${league.name}</span>
+                                <span class="landing-league-count">${league.played_today}/${league.total_members} played today</span>
+                            </div>
+                        `).join('');
+                        landingLeagues.classList.remove('hidden');
+                    } else {
+                        landingLeagues.classList.add('hidden');
+                    }
+                } else {
+                    landingLeagues.classList.add('hidden');
+                }
+
+                // Show completed result if already played
+                if (hasPlayedToday) {
+                    const result = stats.played[currentDate];
+                    const emoji = result.won ? (result.mistakes === 0 ? '🏆' : '✅') : '❌';
+
+                    // Build result grid
+                    let resultGrid = '';
+                    for (const guess of result.guessHistory) {
+                        if (Array.isArray(guess)) {
+                            resultGrid += guess.map(catIndex => SHARE_EMOJIS[catIndex] || '⬛').join('') + '<br>';
+                        } else if (typeof guess === 'number' && guess >= 0) {
+                            resultGrid += SHARE_EMOJIS[guess].repeat(4) + '<br>';
+                        } else {
+                            resultGrid += '⬛⬛⬛⬛<br>';
+                        }
+                    }
+
+                    landingCompletedResult.innerHTML = `${emoji}<br>${resultGrid}`;
+                    landingCompleted.classList.remove('hidden');
+                    playBtn.classList.add('hidden');
+                } else {
+                    landingCompleted.classList.add('hidden');
+                    playBtn.classList.remove('hidden');
+                }
             }
 
-            // Start fresh game
-            remainingWords = shuffle(currentPuzzle.categories.flatMap(c => c.words));
+            await setupLandingPage();
 
+            // Hide loading, show landing page
             loadingEl.classList.add('hidden');
-            gameAreaEl.classList.remove('hidden');
+            landingPage.classList.remove('hidden');
 
-            renderGrid();
-            renderMistakes();
-            updateButtons();
+            // Start game when Play is clicked
+            async function startGame() {
+                landingPage.classList.add('hidden');
+                gameAreaEl.classList.remove('hidden');
 
-            // Load league features in background (don't block game)
-            setTimeout(async () => {
-                try {
-                    await checkLeagueUrl();
-                    await renderLeagueWidget();
-                } catch (e) {
-                    console.log('League features error:', e);
+                if (hasPlayedToday) {
+                    restoreCompletedGame(currentDate);
+                } else {
+                    remainingWords = shuffle(currentPuzzle.categories.flatMap(c => c.words));
+                    renderGrid();
+                    renderMistakes();
+                    updateButtons();
                 }
-            }, 100);
+
+                // Load league features in background
+                setTimeout(async () => {
+                    try {
+                        await checkLeagueUrl();
+                        await renderLeagueWidget();
+                    } catch (e) {
+                        console.log('League features error:', e);
+                    }
+                }, 100);
+            }
+
+            playBtn.addEventListener('click', startGame);
+            viewResultBtn.addEventListener('click', startGame);
         }
 
         async function fetchLeaderboardsIfNeeded() {
