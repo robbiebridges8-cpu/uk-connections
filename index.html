@@ -70,18 +70,6 @@
             padding-right: env(safe-area-inset-right, 0);
         }
 
-        /* Top accent line */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: var(--accent-color);
-            z-index: 9999;
-        }
-
         /* Noise texture overlay */
         body::after {
             content: '';
@@ -1379,34 +1367,32 @@
         /* Difficulty badge */
         .difficulty-badge {
             display: inline-block;
-            padding: 4px 10px;
-            border-radius: 3px;
-            font-size: 0.6rem;
+            padding: 4px 12px;
+            border-radius: 100px;
+            font-size: 0.65rem;
             font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            margin-left: 8px;
-            vertical-align: middle;
+            letter-spacing: 0.05em;
+            text-transform: none;
         }
 
         .difficulty-badge.easy {
-            background: rgba(102, 102, 102, 0.2);
-            color: #999999;
+            background: #888888;
+            color: #ffffff;
         }
 
         .difficulty-badge.medium {
-            background: rgba(184, 160, 0, 0.2);
-            color: #d4b800;
+            background: #F5D800;
+            color: #000000;
         }
 
         .difficulty-badge.hard {
-            background: rgba(204, 102, 0, 0.2);
-            color: #ff8533;
+            background: #FA8C38;
+            color: #000000;
         }
 
         .difficulty-badge.very-hard {
-            background: rgba(204, 51, 51, 0.2);
-            color: #ff5555;
+            background: #cc3333;
+            color: #ffffff;
         }
 
         .difficulty-badge.hidden {
@@ -1469,6 +1455,7 @@
 
         .submission-input {
             flex: 1;
+            min-width: 0;
             padding: 10px 12px;
             background: var(--bg-tile);
             border: 2px solid var(--border-tile);
@@ -1606,6 +1593,30 @@
 
         .submission-success.hidden {
             display: none;
+        }
+
+        /* Past puzzle back button */
+        .past-puzzle-back {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+
+        .past-puzzle-back.hidden {
+            display: none;
+        }
+
+        .past-puzzle-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        #backToTodayBtn {
+            padding: 8px 16px;
+            font-size: 0.7rem;
         }
 
         /* Hidden utility */
@@ -2006,6 +2017,10 @@
 
         <!-- Game area -->
         <div class="game-area hidden" id="gameArea">
+            <div class="past-puzzle-back hidden" id="pastPuzzleBack">
+                <button class="btn btn-secondary" id="backToTodayBtn">&larr; Back to Today</button>
+                <span class="past-puzzle-label" id="pastPuzzleLabel">Playing Puzzle #1</span>
+            </div>
             <div class="difficulty-legend">
                 <span class="difficulty-label">Easy</span>
                 <div class="difficulty-swatches">
@@ -2296,7 +2311,7 @@
 
                 <div class="submission-error hidden" id="submissionError"></div>
 
-                <button class="modal-btn" id="submitPuzzleSubmit">Submit Puzzle</button>
+                <button class="modal-btn" id="submitPuzzleSubmit">Submit a Puzzle</button>
             </div>
 
             <div class="submission-success hidden" id="submissionSuccess">
@@ -2365,6 +2380,8 @@
         let gameOver = false;
         let guessHistory = [];
         let puzzleNumber = 1;
+        let isPlayingPastPuzzle = false;
+        let todaysPuzzleDate = null; // Store today's date for returning from past puzzles
 
         // ===== SOUND SYSTEM =====
         let audioContext = null;
@@ -2502,13 +2519,10 @@
         const joinLeagueName = document.getElementById('joinLeagueName');
         const playerNameInput = document.getElementById('playerNameInput');
         const joinLeagueSubmit = document.getElementById('joinLeagueSubmit');
-        const leaderboardsContainer = document.getElementById('leaderboardsContainer');
-
         // League state
         let currentUser = null; // Supabase user object
         let playerName = localStorage.getItem('player-name');
         let playerLeagues = [];
-        let pendingLeagueId = null; // League to join after name entry
         let pendingAuthAction = null; // Action to perform after auth (e.g., { type: 'create_league' } or { type: 'join_league', leagueId: '...' })
 
         // Auth elements
@@ -2533,8 +2547,17 @@
         // ===== AUTH FUNCTIONS =====
         // Auth state flags
         let authResolved = false;
+        let authStateResolved = false; // Fix 4: Track when resolveAuthState completes
         let returningFromMagicLink = false;
         let needsDisplayNamePrompt = false;
+        let pendingGameStateProcessed = false; // Fix 5: Prevent double processing
+
+        // Fix 3: Countdown interval reference
+        let countdownInterval = null;
+
+        // Fix 9: Archive pagination
+        const ARCHIVE_PAGE_SIZE = 30;
+        let archiveTotalCount = 0;
 
         function getCurrentUserId() {
             return currentUser?.id || null;
@@ -2549,6 +2572,32 @@
         }
 
         // Blocking auth resolution - must complete before ANY UI renders
+        // Fix 6: Fetch display name from Supabase for authenticated users
+        async function fetchPlayerNameFromSupabase(userId) {
+            try {
+                console.log('[Auth] Fetching display_name from Supabase for user:', userId);
+                const { data: player, error } = await db
+                    .from('players')
+                    .select('display_name')
+                    .eq('uuid', userId)
+                    .single();
+
+                if (error) {
+                    console.log('[Auth] No player record found or error:', error);
+                    return null;
+                }
+
+                if (player?.display_name) {
+                    console.log('[Auth] Found display_name in Supabase:', player.display_name);
+                    return player.display_name;
+                }
+                return null;
+            } catch (e) {
+                console.error('[Auth] Exception fetching player name:', e);
+                return null;
+            }
+        }
+
         async function resolveAuthState() {
             console.log('[Auth] resolveAuthState started');
 
@@ -2557,6 +2606,7 @@
             if (useDemo) {
                 console.log('[Demo] Skipping auth');
                 currentUser = { id: 'demo-user', is_anonymous: true };
+                authStateResolved = true;
                 return { success: true, user: currentUser };
             }
 
@@ -2589,6 +2639,13 @@
                         // Set the user immediately
                         currentUser = data.user;
 
+                        // Fix 6: Fetch display name from Supabase as source of truth
+                        const supabaseName = await fetchPlayerNameFromSupabase(currentUser.id);
+                        if (supabaseName) {
+                            playerName = supabaseName;
+                            localStorage.setItem('player-name', supabaseName);
+                        }
+
                         // Process pending game state
                         await processPendingGameState();
 
@@ -2597,6 +2654,7 @@
                             needsDisplayNamePrompt = true;
                         }
 
+                        authStateResolved = true;
                         return { success: true, user: currentUser };
                     }
                 } catch (e) {
@@ -2613,8 +2671,16 @@
             if (session?.user) {
                 currentUser = session.user;
 
-                // If authenticated and has pending game state (e.g. page was refreshed)
+                // Fix 6: For authenticated users, fetch display name from Supabase
                 if (!currentUser.is_anonymous) {
+                    const supabaseName = await fetchPlayerNameFromSupabase(currentUser.id);
+                    if (supabaseName) {
+                        playerName = supabaseName;
+                        localStorage.setItem('player-name', supabaseName);
+                    }
+                    // Fall back to localStorage if Supabase doesn't have it
+                    // (playerName was already initialized from localStorage)
+
                     const pendingState = localStorage.getItem('pendingGameState');
                     if (pendingState) {
                         returningFromMagicLink = true;
@@ -2625,6 +2691,7 @@
                     }
                 }
 
+                authStateResolved = true;
                 return { success: true, user: currentUser };
             }
 
@@ -2633,17 +2700,27 @@
             const { data, error } = await db.auth.signInAnonymously();
             if (error) {
                 console.error('[Auth] Anonymous auth error:', error);
+                authStateResolved = true;
                 return { success: false, error };
             }
 
             currentUser = data.user;
+            authStateResolved = true;
             return { success: true, user: currentUser };
         }
 
         // Process any pending game state from magic link flow
         async function processPendingGameState() {
+            // Fix 5: Prevent double processing
+            if (pendingGameStateProcessed) {
+                console.log('[Auth] pendingGameState already processed, skipping');
+                return;
+            }
+
             const pendingState = localStorage.getItem('pendingGameState');
             if (!pendingState) return;
+
+            pendingGameStateProcessed = true;
 
             try {
                 const state = JSON.parse(pendingState);
@@ -2680,6 +2757,13 @@
         function setupAuthListener() {
             db.auth.onAuthStateChange(async (event, session) => {
                 console.log('[Auth] State changed:', event, session?.user?.id);
+
+                // Fix 4: Skip INITIAL_SESSION events until resolveAuthState completes
+                // This prevents race conditions where the listener fires before resolveAuthState finishes
+                if (event === 'INITIAL_SESSION' && !authStateResolved) {
+                    console.log('[Auth] Skipping INITIAL_SESSION - authState not yet resolved');
+                    return;
+                }
 
                 const previousUser = currentUser;
                 currentUser = session?.user || null;
@@ -2792,37 +2876,66 @@
         }
 
         // Migrate scores from anonymous user to authenticated user
+        // Fix 7: Sequential updates with proper error handling
         async function migrateAnonymousScores(anonymousUserId, newUserId) {
             if (!anonymousUserId || !newUserId || anonymousUserId === newUserId) return;
 
-            console.log('Migrating scores from', anonymousUserId, 'to', newUserId);
+            console.log('[Migration] Starting migration from', anonymousUserId, 'to', newUserId);
+
             try {
-                // Update daily_scores to use the new user ID
-                const { error } = await db
+                // Step 1: Update daily_scores
+                console.log('[Migration] Step 1: Updating daily_scores...');
+                const { error: scoresError } = await db
                     .from('daily_scores')
                     .update({ player_uuid: newUserId })
                     .eq('player_uuid', anonymousUserId);
 
-                if (error) {
-                    console.error('Score migration error:', error);
-                } else {
-                    console.log('Score migration complete');
+                if (scoresError) {
+                    console.error('[Migration] Step 1 FAILED - daily_scores error:', scoresError);
+                    localStorage.setItem('migrationFailed', 'true');
+                    showToast("We couldn't fully sync your progress — please contact support");
+                    return; // Halt - don't continue with partial migration
                 }
+                console.log('[Migration] Step 1 complete: daily_scores updated');
 
-                // Also update league_memberships if any
-                await db
+                // Step 2: Update league_memberships
+                console.log('[Migration] Step 2: Updating league_memberships...');
+                const { error: membershipsError } = await db
                     .from('league_memberships')
                     .update({ player_uuid: newUserId })
                     .eq('player_uuid', anonymousUserId);
 
-                // Update players table
-                await db
+                if (membershipsError) {
+                    console.error('[Migration] Step 2 FAILED - league_memberships error:', membershipsError);
+                    localStorage.setItem('migrationFailed', 'true');
+                    showToast("We couldn't fully sync your progress — please contact support");
+                    return; // Halt
+                }
+                console.log('[Migration] Step 2 complete: league_memberships updated');
+
+                // Step 3: Update players table
+                console.log('[Migration] Step 3: Updating players table...');
+                const { error: playersError } = await db
                     .from('players')
                     .update({ uuid: newUserId })
                     .eq('uuid', anonymousUserId);
 
+                if (playersError) {
+                    console.error('[Migration] Step 3 FAILED - players error:', playersError);
+                    localStorage.setItem('migrationFailed', 'true');
+                    showToast("We couldn't fully sync your progress — please contact support");
+                    return; // Halt
+                }
+                console.log('[Migration] Step 3 complete: players updated');
+
+                // All steps successful
+                console.log('[Migration] All steps complete - migration successful');
+                localStorage.removeItem('migrationFailed'); // Clear any previous failure flag
+
             } catch (e) {
-                console.error('Score migration exception:', e);
+                console.error('[Migration] Exception during migration:', e);
+                localStorage.setItem('migrationFailed', 'true');
+                showToast("We couldn't fully sync your progress — please contact support");
             }
         }
 
@@ -3205,7 +3318,132 @@
             localStorage.setItem('linked-stats', JSON.stringify(stats));
         }
 
-        function updateStatsDisplay() {
+        // Fetch stats from Supabase for authenticated users
+        async function fetchStatsFromSupabase() {
+            const userId = getCurrentUserId();
+            if (!userId) {
+                console.log('[Stats] No user ID, cannot fetch from Supabase');
+                return null;
+            }
+
+            try {
+                console.log('[Stats] Fetching stats from Supabase for user:', userId);
+
+                // Get all scores for this user
+                const { data: scores, error } = await db
+                    .from('daily_scores')
+                    .select('date, mistakes')
+                    .eq('player_uuid', userId)
+                    .order('date', { ascending: false });
+
+                if (error) {
+                    console.error('[Stats] Supabase fetch error:', error);
+                    return null;
+                }
+
+                console.log('[Stats] Fetched', scores?.length || 0, 'personal scores from Supabase');
+
+                if (!scores || scores.length === 0) {
+                    return {
+                        played: 0,
+                        streak: 0,
+                        maxStreak: 0,
+                        avgMistakes: '0.0',
+                        perfectGames: 0
+                    };
+                }
+
+                // Calculate stats
+                const playedCount = scores.length;
+                let totalMistakes = 0;
+                let perfectGames = 0;
+
+                scores.forEach(s => {
+                    totalMistakes += s.mistakes || 0;
+                    if (s.mistakes === 0) {
+                        perfectGames++;
+                    }
+                });
+
+                const avgMistakes = playedCount > 0 ? (totalMistakes / playedCount).toFixed(1) : '0.0';
+
+                // Calculate streaks from dates
+                const today = getTodayString();
+                const dateSet = new Set(scores.map(s => s.date));
+
+                // Current streak: consecutive days ending today (or yesterday if not played today)
+                let currentStreak = 0;
+                let checkDate = new Date(today);
+
+                // If not played today, start checking from yesterday
+                if (!dateSet.has(today)) {
+                    checkDate.setDate(checkDate.getDate() - 1);
+                }
+
+                while (dateSet.has(checkDate.toISOString().split('T')[0])) {
+                    currentStreak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                }
+
+                // Best streak: find longest consecutive run
+                let maxStreak = 0;
+                if (scores.length > 0) {
+                    // Sort dates ascending for streak calculation
+                    const sortedDates = scores.map(s => s.date).sort();
+                    let streak = 1;
+
+                    for (let i = 1; i < sortedDates.length; i++) {
+                        const prevDate = new Date(sortedDates[i - 1]);
+                        const currDate = new Date(sortedDates[i]);
+                        const diffDays = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+
+                        if (diffDays === 1) {
+                            streak++;
+                        } else {
+                            maxStreak = Math.max(maxStreak, streak);
+                            streak = 1;
+                        }
+                    }
+                    maxStreak = Math.max(maxStreak, streak);
+                }
+
+                console.log('[Stats] Calculated from Supabase:', { playedCount, currentStreak, maxStreak, avgMistakes, perfectGames });
+
+                return {
+                    played: playedCount,
+                    streak: currentStreak,
+                    maxStreak: maxStreak,
+                    avgMistakes: avgMistakes,
+                    perfectGames: perfectGames
+                };
+            } catch (e) {
+                console.error('[Stats] Exception fetching stats from Supabase:', e);
+                return null;
+            }
+        }
+
+        async function updateStatsDisplay() {
+            let statsData;
+
+            if (isAuthenticatedUser()) {
+                // Authenticated users: fetch from Supabase
+                console.log('[Stats] User is authenticated, fetching from Supabase');
+                statsData = await fetchStatsFromSupabase();
+
+                if (statsData) {
+                    document.getElementById('statPlayed').textContent = statsData.played;
+                    document.getElementById('statStreak').textContent = statsData.streak;
+                    document.getElementById('statBestStreak').textContent = statsData.maxStreak;
+                    document.getElementById('statAvgMistakes').textContent = statsData.avgMistakes;
+                    document.getElementById('statPerfect').textContent = statsData.perfectGames;
+                    return;
+                }
+                // Fall through to localStorage if Supabase fetch failed
+                console.log('[Stats] Supabase fetch failed, falling back to localStorage');
+            }
+
+            // Anonymous users or fallback: use localStorage
+            console.log('[Stats] Using localStorage for stats');
             const stats = getStats();
             const playedEntries = Object.values(stats.played);
             const playedCount = playedEntries.length;
@@ -3244,51 +3482,88 @@
             localStorage.setItem('player-name', name);
         }
 
+        // Fix 1 & 2: Batched queries, no league_id in daily_scores
         async function fetchPlayerLeagues() {
             const userId = getCurrentUserId();
-            console.log('fetchPlayerLeagues called, userId:', userId);
+            console.log('[Leagues] fetchPlayerLeagues called, userId:', userId);
             if (!userId) return [];
+
             try {
                 const today = getTodayString();
 
-                // Get all leagues the player is in
-                const { data: memberships, error } = await db
+                // Step 1: Get all leagues the user is in
+                const { data: userMemberships, error: userMembershipError } = await db
                     .from('league_memberships')
                     .select('league_id, leagues(id, name)')
                     .eq('player_uuid', userId);
 
-                console.log('Memberships query result:', { memberships, error });
+                if (userMembershipError) {
+                    console.error('[Leagues] Error fetching user memberships:', userMembershipError);
+                    return [];
+                }
 
-                if (!memberships || memberships.length === 0) {
+                console.log('[Leagues] User memberships:', userMemberships);
+
+                if (!userMemberships || userMemberships.length === 0) {
                     playerLeagues = [];
                     return [];
                 }
 
-                // Get stats for each league
-                const leagues = await Promise.all(memberships.map(async m => {
-                    const { count: totalMembers } = await db
-                        .from('league_memberships')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('league_id', m.league_id);
+                // Step 2: Get ALL memberships for ALL user's leagues in one query
+                const leagueIds = userMemberships.map(m => m.league_id);
+                const { data: allMemberships, error: allMembershipsError } = await db
+                    .from('league_memberships')
+                    .select('league_id, player_uuid')
+                    .in('league_id', leagueIds);
 
-                    const { count: playedToday } = await db
-                        .from('daily_scores')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('league_id', m.league_id)
-                        .eq('date', today);
+                if (allMembershipsError) {
+                    console.error('[Leagues] Error fetching all memberships:', allMembershipsError);
+                    return [];
+                }
+
+                // Step 3: Get ALL daily_scores for today for ALL member player_uuids
+                const allMemberUuids = [...new Set((allMemberships || []).map(m => m.player_uuid))];
+                const { data: todayScores, error: scoresError } = await db
+                    .from('daily_scores')
+                    .select('player_uuid')
+                    .in('player_uuid', allMemberUuids)
+                    .eq('date', today);
+
+                if (scoresError) {
+                    console.error('[Leagues] Error fetching today scores:', scoresError);
+                    // Continue without scores data
+                }
+
+                // Create a Set of player_uuids who have played today
+                const playedTodaySet = new Set((todayScores || []).map(s => s.player_uuid));
+
+                // Step 4: Join in JavaScript - count members and played per league
+                const membersByLeague = {};
+                (allMemberships || []).forEach(m => {
+                    if (!membersByLeague[m.league_id]) {
+                        membersByLeague[m.league_id] = [];
+                    }
+                    membersByLeague[m.league_id].push(m.player_uuid);
+                });
+
+                const leagues = userMemberships.map(m => {
+                    const leagueMembers = membersByLeague[m.league_id] || [];
+                    const playedCount = leagueMembers.filter(uuid => playedTodaySet.has(uuid)).length;
 
                     return {
                         id: m.league_id,
                         name: m.leagues?.name || 'Unknown',
-                        total_members: totalMembers || 0,
-                        played_today: playedToday || 0
+                        total_members: leagueMembers.length,
+                        played_today: playedCount
                     };
-                }));
+                });
 
+                console.log('[Leagues] Computed leagues:', leagues);
                 playerLeagues = leagues;
                 return playerLeagues;
+
             } catch (error) {
-                console.error('Error fetching leagues:', error);
+                console.error('[Leagues] Exception in fetchPlayerLeagues:', error);
                 return [];
             }
         }
@@ -3353,8 +3628,11 @@
             if (!userId) return false;
 
             if (!playerName) {
-                // Need to prompt for name first
-                pendingLeagueId = leagueId;
+                // Fix 8: Use sessionStorage with proper structure instead of sentinel values
+                sessionStorage.setItem('pendingLeagueAction', JSON.stringify({
+                    action: 'join',
+                    code: leagueId
+                }));
                 const { data: league } = await db
                     .from('leagues')
                     .select('*')
@@ -3386,45 +3664,103 @@
 
         async function submitScore(mistakeCount) {
             const userId = getCurrentUserId();
-            if (!userId || playerLeagues.length === 0) return;
+
+            // Only submit scores for authenticated users
+            if (!userId) {
+                console.log('[Score] No user ID, skipping score submission');
+                return;
+            }
+
+            if (!isAuthenticatedUser()) {
+                console.log('[Score] Anonymous user, skipping score submission to Supabase');
+                return;
+            }
+
+            console.log('[Score] Submitting score for authenticated user:', userId, 'mistakes:', mistakeCount, 'date:', currentDate);
 
             try {
-                // Insert/update score for each league the player is in
-                for (const league of playerLeagues) {
-                    await db
-                        .from('daily_scores')
-                        .upsert(
-                            { player_uuid: userId, league_id: league.id, date: currentDate, mistakes: mistakeCount },
-                            { onConflict: 'player_uuid,league_id,date' }
-                        );
+                // Insert/update single score row (one row per user per date)
+                const scoreData = {
+                    player_uuid: userId,
+                    date: currentDate,
+                    mistakes: mistakeCount
+                };
+                console.log('[Score] Upserting score:', scoreData);
+
+                const { error } = await db
+                    .from('daily_scores')
+                    .upsert(scoreData, {
+                        onConflict: 'player_uuid,date',
+                        ignoreDuplicates: false
+                    });
+
+                if (error) {
+                    console.error('[Score] Score upsert error:', error);
+                } else {
+                    console.log('[Score] Score upserted successfully');
                 }
             } catch (error) {
-                console.error('Error submitting score:', error);
+                console.error('[Score] Exception submitting score:', error);
             }
         }
 
+        // Fix 2: Batched queries for leaderboards
         async function fetchLeaderboards() {
             if (playerLeagues.length === 0) return [];
 
-            const leaderboards = [];
-            for (const league of playerLeagues) {
-                try {
-                    // Get all members with their player info
-                    const { data: memberships } = await db
-                        .from('league_memberships')
-                        .select('player_uuid, players(uuid, display_name)')
-                        .eq('league_id', league.id);
+            try {
+                const leagueIds = playerLeagues.map(l => l.id);
+                console.log('[Leaderboards] Fetching for leagues:', leagueIds);
 
-                    // Get scores for this date
-                    const { data: scores } = await db
+                // Step 1: Get ALL memberships for ALL leagues in one query
+                const { data: allMemberships, error: membershipsError } = await db
+                    .from('league_memberships')
+                    .select('league_id, player_uuid, players(uuid, display_name)')
+                    .in('league_id', leagueIds);
+
+                if (membershipsError) {
+                    console.error('[Leaderboards] Error fetching memberships:', membershipsError);
+                    return [];
+                }
+
+                // Step 2: Get ALL daily_scores for ALL member UUIDs in one query
+                const allMemberUuids = [...new Set((allMemberships || []).map(m => m.player_uuid))];
+
+                let scoresMap = {};
+                if (allMemberUuids.length > 0) {
+                    const { data: allScores, error: scoresError } = await db
                         .from('daily_scores')
-                        .select('*')
-                        .eq('league_id', league.id)
+                        .select('player_uuid, date, mistakes')
+                        .in('player_uuid', allMemberUuids)
                         .eq('date', currentDate);
 
+                    if (scoresError) {
+                        console.error('[Leaderboards] Error fetching scores:', scoresError);
+                        // Continue without scores
+                    } else {
+                        // Create a map of player_uuid -> score
+                        (allScores || []).forEach(s => {
+                            scoresMap[s.player_uuid] = s;
+                        });
+                    }
+                }
+
+                // Step 3: Group memberships by league and build leaderboards
+                const membershipsByLeague = {};
+                (allMemberships || []).forEach(m => {
+                    if (!membershipsByLeague[m.league_id]) {
+                        membershipsByLeague[m.league_id] = [];
+                    }
+                    membershipsByLeague[m.league_id].push(m);
+                });
+
+                // Step 4: Build leaderboard for each league
+                const leaderboards = playerLeagues.map(league => {
+                    const memberships = membershipsByLeague[league.id] || [];
+
                     // Build member list with scores
-                    const members = (memberships || []).map(m => {
-                        const score = (scores || []).find(s => s.player_uuid === m.player_uuid);
+                    const members = memberships.map(m => {
+                        const score = scoresMap[m.player_uuid];
                         return {
                             uuid: m.player_uuid,
                             display_name: m.players?.display_name || 'Unknown',
@@ -3460,16 +3796,20 @@
                         return { ...member, rank: null };
                     });
 
-                    leaderboards.push({
+                    return {
                         league: { id: league.id, name: league.name },
                         date: currentDate,
                         leaderboard
-                    });
-                } catch (error) {
-                    console.error('Error fetching leaderboard:', error);
-                }
+                    };
+                });
+
+                console.log('[Leaderboards] Built', leaderboards.length, 'leaderboards');
+                return leaderboards;
+
+            } catch (error) {
+                console.error('[Leaderboards] Exception in fetchLeaderboards:', error);
+                return [];
             }
-            return leaderboards;
         }
 
         // Store leaderboards for modal navigation
@@ -3720,28 +4060,44 @@
             }
         }
 
-        // Fetch archive (list of available puzzles - only past/today, not future)
-        async function fetchArchive() {
+        // Fix 9: Fetch archive with pagination (list of available puzzles - only past/today, not future)
+        async function fetchArchive(offset = 0, limit = ARCHIVE_PAGE_SIZE) {
             try {
                 const today = getTodayString();
 
+                // First get total count
+                const { count: totalCount, error: countError } = await db
+                    .from('puzzles')
+                    .select('*', { count: 'exact', head: true })
+                    .lte('date', today);
+
+                if (countError) {
+                    console.error('[Archive] Error getting count:', countError);
+                }
+                archiveTotalCount = totalCount || 0;
+
+                // Fetch paginated puzzles (most recent first)
                 const { data: puzzles, error } = await db
                     .from('puzzles')
                     .select('date')
                     .lte('date', today)
-                    .order('date', { ascending: true });
+                    .order('date', { ascending: false })
+                    .range(offset, offset + limit - 1);
 
                 if (error) {
+                    console.error('[Archive] Error fetching puzzles:', error);
                     throw new Error('Failed to fetch archive');
                 }
 
-                // Return dates with puzzle numbers
+                console.log('[Archive] Fetched', puzzles?.length || 0, 'of', archiveTotalCount, 'total puzzles');
+
+                // Calculate puzzle numbers (offset from end since sorted descending)
                 return (puzzles || []).map((p, index) => ({
                     date: p.date,
-                    puzzleNumber: index + 1
+                    puzzleNumber: archiveTotalCount - offset - index
                 }));
             } catch (error) {
-                console.error('Error fetching archive:', error);
+                console.error('[Archive] Exception in fetchArchive:', error);
                 return [];
             }
         }
@@ -3958,8 +4314,8 @@
             gameOver = true;
             sounds.complete();
 
+            // Save to localStorage as cache/fallback
             const stats = getStats();
-
             stats.played[currentDate] = {
                 won: true,
                 mistakes: mistakes,
@@ -3980,12 +4336,13 @@
                 }
                 stats.maxStreak = Math.max(stats.maxStreak, stats.streak);
             }
-
             saveStats(stats);
-            updateStatsDisplay();
 
-            // Submit score to leagues
+            // Submit score to Supabase (for authenticated users)
             await submitScore(mistakes);
+
+            // Refresh stats display from correct source (Supabase or localStorage)
+            await updateStatsDisplay();
 
             // Pick win message
             const winMessages = mistakes === 0
@@ -4004,8 +4361,8 @@
             gameOver = true;
             sounds.lose();
 
+            // Save to localStorage as cache/fallback
             const stats = getStats();
-
             stats.played[currentDate] = {
                 won: false,
                 mistakes: mistakes,
@@ -4018,10 +4375,12 @@
                 stats.streak = 0;
             }
             saveStats(stats);
-            updateStatsDisplay();
 
-            // Submit score to leagues (4 mistakes = loss)
+            // Submit score to Supabase (for authenticated users)
             await submitScore(mistakes);
+
+            // Refresh stats display from correct source (Supabase or localStorage)
+            await updateStatsDisplay();
 
             // Reveal remaining categories
             for (const cat of currentPuzzle.categories) {
@@ -4059,6 +4418,7 @@
                 const difficultyClass = currentPuzzle.difficulty.replace('_', '-');
                 endDifficulty.textContent = difficultyLabels[currentPuzzle.difficulty] || currentPuzzle.difficulty;
                 endDifficulty.className = `difficulty-badge ${difficultyClass}`;
+                endDifficulty.classList.remove('hidden');
             } else {
                 endDifficulty.classList.add('hidden');
             }
@@ -4121,9 +4481,12 @@
             // Show auth prompt on end screen
             updateAuthUI();
 
-            // Start countdown
+            // Fix 3: Clear existing countdown interval before starting new one
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
             updateCountdown();
-            setInterval(updateCountdown, 1000);
+            countdownInterval = setInterval(updateCountdown, 1000);
 
             setTimeout(() => {
                 endScreen.classList.add('visible');
@@ -4242,63 +4605,96 @@
         }
 
         // ===== ARCHIVE =====
-        async function populateArchive() {
-            archiveList.innerHTML = '<div class="loading-text">Loading archive...</div>';
+        // Fix 9: Archive with pagination
+        let archiveCurrentOffset = 0;
+
+        function renderArchiveItem(puzzleInfo, stats) {
+            const played = stats.played[puzzleInfo.date];
+
+            const item = document.createElement('div');
+            item.className = `archive-item ${played ? 'played' : ''}`;
+            item.dataset.date = puzzleInfo.date;
+
+            let statusHTML = '';
+            if (played) {
+                const resultEmojis = played.guessHistory.map(g => {
+                    if (Array.isArray(g)) {
+                        // New format: array of category indices
+                        const isCorrect = g.every(idx => idx === g[0]);
+                        return isCorrect ? SHARE_EMOJIS[g[0]] : '🔀';
+                    }
+                    // Legacy format
+                    return g >= 0 ? SHARE_EMOJIS[g] : '⬛';
+                }).join('');
+                statusHTML = `
+                    <div class="archive-item-result"><span>${resultEmojis}</span></div>
+                    <span class="archive-item-badge ${played.won ? 'won' : 'lost'}">${played.won ? 'Won' : 'Lost'}</span>
+                `;
+            } else {
+                statusHTML = `<span class="archive-item-badge play">Play</span>`;
+            }
+
+            item.innerHTML = `
+                <div class="archive-item-info">
+                    <div class="archive-item-date">${formatDateForDisplay(puzzleInfo.date)}</div>
+                    <div class="archive-item-number">Puzzle #${puzzleInfo.puzzleNumber}</div>
+                </div>
+                <div class="archive-item-status">
+                    ${statusHTML}
+                </div>
+            `;
+
+            if (!played) {
+                item.addEventListener('click', () => {
+                    closeModal(archiveModal);
+                    loadPuzzle(puzzleInfo.date);
+                });
+            }
+
+            return item;
+        }
+
+        async function populateArchive(append = false) {
             const stats = getStats();
 
-            // Fetch archive from API
-            const archive = await fetchArchive();
+            if (!append) {
+                archiveList.innerHTML = '<div class="loading-text">Loading archive...</div>';
+                archiveCurrentOffset = 0;
+            }
 
-            archiveList.innerHTML = '';
+            // Fetch archive page
+            const archive = await fetchArchive(archiveCurrentOffset, ARCHIVE_PAGE_SIZE);
 
-            // Sort by date descending
-            const sortedArchive = archive.sort((a, b) => b.date.localeCompare(a.date));
-
-            sortedArchive.forEach((puzzleInfo) => {
-                const played = stats.played[puzzleInfo.date];
-
-                const item = document.createElement('div');
-                item.className = `archive-item ${played ? 'played' : ''}`;
-                item.dataset.date = puzzleInfo.date;
-
-                let statusHTML = '';
-                if (played) {
-                    const resultEmojis = played.guessHistory.map(g => {
-                        if (Array.isArray(g)) {
-                            // New format: array of category indices
-                            const isCorrect = g.every(idx => idx === g[0]);
-                            return isCorrect ? SHARE_EMOJIS[g[0]] : '🔀';
-                        }
-                        // Legacy format
-                        return g >= 0 ? SHARE_EMOJIS[g] : '⬛';
-                    }).join('');
-                    statusHTML = `
-                        <div class="archive-item-result"><span>${resultEmojis}</span></div>
-                        <span class="archive-item-badge ${played.won ? 'won' : 'lost'}">${played.won ? 'Won' : 'Lost'}</span>
-                    `;
-                } else {
-                    statusHTML = `<span class="archive-item-badge play">Play</span>`;
+            if (!append) {
+                archiveList.innerHTML = '';
+            } else {
+                // Remove existing "Load more" button before appending
+                const existingLoadMore = archiveList.querySelector('.archive-load-more');
+                if (existingLoadMore) {
+                    existingLoadMore.remove();
                 }
+            }
 
-                item.innerHTML = `
-                    <div class="archive-item-info">
-                        <div class="archive-item-date">${formatDateForDisplay(puzzleInfo.date)}</div>
-                        <div class="archive-item-number">Puzzle #${puzzleInfo.puzzleNumber}</div>
-                    </div>
-                    <div class="archive-item-status">
-                        ${statusHTML}
-                    </div>
-                `;
-
-                if (!played) {
-                    item.addEventListener('click', () => {
-                        closeModal(archiveModal);
-                        loadPuzzle(puzzleInfo.date);
-                    });
-                }
-
-                archiveList.appendChild(item);
+            // Already sorted descending from fetchArchive
+            archive.forEach((puzzleInfo) => {
+                archiveList.appendChild(renderArchiveItem(puzzleInfo, stats));
             });
+
+            archiveCurrentOffset += archive.length;
+
+            // Add "Load more" button if there are more puzzles
+            if (archiveCurrentOffset < archiveTotalCount) {
+                const loadMoreBtn = document.createElement('button');
+                loadMoreBtn.className = 'archive-load-more btn btn-secondary';
+                loadMoreBtn.textContent = `Load more (${archiveTotalCount - archiveCurrentOffset} remaining)`;
+                loadMoreBtn.style.cssText = 'width: 100%; margin-top: 12px;';
+                loadMoreBtn.addEventListener('click', async () => {
+                    loadMoreBtn.disabled = true;
+                    loadMoreBtn.textContent = 'Loading...';
+                    await populateArchive(true);
+                });
+                archiveList.appendChild(loadMoreBtn);
+            }
         }
 
         async function loadPuzzle(date) {
@@ -4310,6 +4706,10 @@
             }
 
             const { puzzle, puzzleNumber: num } = result;
+
+            // Check if this is a past puzzle
+            const today = getTodayString();
+            isPlayingPastPuzzle = (date !== today);
 
             // Reset game state
             currentPuzzle = puzzle;
@@ -4325,6 +4725,21 @@
             // Clear UI
             solvedAreaEl.innerHTML = '';
             endScreen.classList.remove('visible');
+
+            // Hide landing page when loading any puzzle
+            const landingPage = document.getElementById('landingPage');
+            landingPage.classList.add('hidden');
+            document.body.classList.remove('on-landing-page');
+
+            // Show/hide past puzzle back button
+            const pastPuzzleBack = document.getElementById('pastPuzzleBack');
+            const pastPuzzleLabel = document.getElementById('pastPuzzleLabel');
+            if (isPlayingPastPuzzle) {
+                pastPuzzleBack.classList.remove('hidden');
+                pastPuzzleLabel.textContent = `Playing Puzzle #${num}`;
+            } else {
+                pastPuzzleBack.classList.add('hidden');
+            }
 
             const stats = getStats();
             if (stats.played[date]) {
@@ -4394,8 +4809,8 @@
             shuffleBtn.addEventListener('click', handleShuffle);
             shareBtn.addEventListener('click', handleShare);
             rulesBtn.addEventListener('click', () => openModal(rulesModal));
-            statsBtn.addEventListener('click', () => {
-                updateStatsDisplay();
+            statsBtn.addEventListener('click', async () => {
+                await updateStatsDisplay();
                 openModal(statsModal);
             });
             archiveBtn.addEventListener('click', () => {
@@ -4407,6 +4822,30 @@
             const soundBtn = document.getElementById('soundBtn');
             soundBtn.addEventListener('click', toggleSound);
             updateSoundButtonUI();
+
+            // Back to today button (for past puzzles)
+            document.getElementById('backToTodayBtn').addEventListener('click', async () => {
+                // Return to landing page
+                isPlayingPastPuzzle = false;
+                document.getElementById('pastPuzzleBack').classList.add('hidden');
+                gameAreaEl.classList.add('hidden');
+                endScreen.classList.remove('visible');
+
+                // Reload today's puzzle state
+                if (todaysPuzzleDate) {
+                    const result = await fetchPuzzleByDate(todaysPuzzleDate);
+                    if (result) {
+                        currentPuzzle = result.puzzle;
+                        currentDate = todaysPuzzleDate;
+                        puzzleNumber = result.puzzleNumber;
+                    }
+                }
+
+                // Show landing page
+                const landingPage = document.getElementById('landingPage');
+                landingPage.classList.remove('hidden');
+                document.body.classList.add('on-landing-page');
+            });
 
             // Re-scale text on window resize
             window.addEventListener('resize', () => {
@@ -4443,13 +4882,16 @@
             });
 
             viewLeaguesBtn.addEventListener('click', async () => {
-                // Ensure leaderboards are loaded
-                if (cachedLeaderboards.length === 0 && playerLeagues.length > 0) {
+                // Always try to fetch leaderboards if we have leagues
+                if (playerLeagues.length > 0) {
                     cachedLeaderboards = await fetchLeaderboards();
                 }
-                if (cachedLeaderboards.length > 0) {
+                // Always open the modal if user has leagues, even if leaderboards fetch returned empty
+                if (playerLeagues.length > 0) {
                     renderLeagueModal(0);
                     openModal(document.getElementById('viewLeaguesModal'));
+                } else {
+                    showToast('No leagues yet');
                 }
             });
 
@@ -4473,7 +4915,6 @@
                 try {
                     // Ensure we have a name before creating
                     if (!playerName) {
-                        pendingLeagueId = null; // Will create after name entry
                         const tempName = name; // Store league name
                         closeModal(createLeagueModal);
 
@@ -4481,8 +4922,11 @@
                         joinLeagueName.textContent = tempName;
                         playerNameInput.value = '';
 
-                        // Special handling: create league after name entry
-                        pendingLeagueId = 'CREATE:' + tempName;
+                        // Fix 8: Use sessionStorage with proper structure
+                        sessionStorage.setItem('pendingLeagueAction', JSON.stringify({
+                            action: 'create',
+                            name: tempName
+                        }));
                         openModal(joinLeagueModal);
                         return;
                     }
@@ -4600,21 +5044,40 @@
                 if (!name) return;
 
                 const userId = getCurrentUserId();
-                if (!userId) return;
+                console.log('[DisplayName] joinLeagueSubmit - userId:', userId);
+                if (!userId) {
+                    showToast('Not signed in');
+                    return;
+                }
 
                 joinLeagueSubmit.disabled = true;
                 try {
-                    setPlayerName(name);
-
-                    // Update player name in Supabase
-                    await db
+                    // Save to Supabase FIRST, before localStorage
+                    console.log('[DisplayName] Saving to Supabase:', { uuid: userId, display_name: name.trim() });
+                    const { error: dbError } = await db
                         .from('players')
                         .upsert({ uuid: userId, display_name: name.trim() }, { onConflict: 'uuid' });
 
-                    if (pendingLeagueId) {
-                        if (pendingLeagueId.startsWith('CREATE:')) {
+                    if (dbError) {
+                        console.error('[DisplayName] Supabase upsert failed:', dbError);
+                        showToast('Failed to save name: ' + dbError.message);
+                        return;
+                    }
+                    console.log('[DisplayName] Supabase save successful');
+
+                    // Only update localStorage after successful DB save
+                    setPlayerName(name);
+                    console.log('[DisplayName] localStorage updated');
+
+                    // Fix 8: Read from sessionStorage with proper structure
+                    const storedAction = sessionStorage.getItem('pendingLeagueAction');
+                    if (storedAction) {
+                        const pendingAction = JSON.parse(storedAction);
+                        sessionStorage.removeItem('pendingLeagueAction');
+
+                        if (pendingAction.action === 'create') {
                             // Was creating a league, now create it
-                            const leagueName = pendingLeagueId.slice(7);
+                            const leagueName = pendingAction.name;
                             const league = await createLeague(leagueName);
                             closeModal(joinLeagueModal);
                             openModal(createLeagueModal);
@@ -4624,13 +5087,12 @@
                             createLeagueForm.classList.add('hidden');
                             leagueUrlContainer.classList.remove('hidden');
                             createLeagueTitle.textContent = 'League Created';
-                        } else {
+                        } else if (pendingAction.action === 'join') {
                             // Joining existing league
-                            await joinLeague(pendingLeagueId);
+                            await joinLeague(pendingAction.code);
                             closeModal(joinLeagueModal);
                             showToast('Joined league!');
                         }
-                        pendingLeagueId = null;
                     }
 
                     await renderLeagueWidget();
@@ -4705,24 +5167,28 @@
                 welcomeSubmit.disabled = true;
                 try {
                     const userId = getCurrentUserId();
+                    console.log('[DisplayName] welcomeSubmit - userId:', userId, 'name:', name);
                     if (!userId) {
                         showToast('Not signed in');
                         return;
                     }
 
                     // Save to Supabase first
+                    console.log('[DisplayName] Saving to Supabase:', { uuid: userId, display_name: name });
                     const { error: dbError } = await db
                         .from('players')
                         .upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
 
                     if (dbError) {
-                        console.error('Database error saving name:', dbError);
+                        console.error('[DisplayName] Supabase upsert failed:', dbError);
                         showToast('Failed to save name: ' + dbError.message);
                         return;
                     }
+                    console.log('[DisplayName] Supabase save successful');
 
                     // Only update local state after successful DB save
                     setPlayerName(name);
+                    console.log('[DisplayName] localStorage updated');
                     closeModal(welcomeModal);
 
                     // Update landing page welcome message
@@ -4760,7 +5226,7 @@
                 }
             });
 
-            updateStatsDisplay();
+            await updateStatsDisplay();
 
             // Landing page elements
             const landingPage = document.getElementById('landingPage');
@@ -4786,6 +5252,7 @@
 
             currentPuzzle = todayPuzzle;
             currentDate = todayPuzzle.date;
+            todaysPuzzleDate = todayPuzzle.date; // Store for returning from past puzzles
 
             // Update landing page puzzle number and difficulty
             landingPuzzleNumber.textContent = `Puzzle #${puzzleNumber}`;
@@ -4804,6 +5271,7 @@
                 const difficultyClass = currentPuzzle.difficulty.replace('_', '-');
                 landingDifficulty.textContent = difficultyLabels[currentPuzzle.difficulty] || currentPuzzle.difficulty;
                 landingDifficulty.className = `difficulty-badge ${difficultyClass}`;
+                landingDifficulty.classList.remove('hidden');
             } else {
                 landingDifficulty.classList.add('hidden');
             }
@@ -4923,12 +5391,6 @@
 
             playBtn.addEventListener('click', startGame);
             viewResultBtn.addEventListener('click', startGame);
-        }
-
-        async function fetchLeaderboardsIfNeeded() {
-            if (playerLeagues.length > 0 && cachedLeaderboards.length === 0) {
-                cachedLeaderboards = await fetchLeaderboards();
-            }
         }
 
         // ===== PUZZLE SUBMISSION =====
