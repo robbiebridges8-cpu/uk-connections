@@ -151,6 +151,21 @@
             border-color: var(--text-secondary);
         }
 
+        .header-btn.icon-btn {
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-btn.icon-btn svg {
+            display: block;
+        }
+
+        .header-btn.icon-btn .hidden {
+            display: none;
+        }
+
         /* Main container */
         .container {
             flex: 1;
@@ -281,10 +296,14 @@
             font-weight: 700;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            color: inherit;
+            color: #000000;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .solved-category.gradient-4 .solved-category-name {
+            color: #ffffff;
         }
 
         .solved-category-name span {
@@ -297,18 +316,30 @@
             font-size: 0.65rem;
             font-weight: 500;
             letter-spacing: 0.02em;
-            color: inherit;
-            opacity: 0.7;
+            color: #000000;
+            opacity: 0.8;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             margin-top: 2px;
         }
 
+        .solved-category.gradient-4 .solved-category-words {
+            color: #ffffff;
+        }
+
         .solved-category-words span {
             display: inline-block;
             white-space: nowrap;
             transform-origin: left center;
+        }
+
+        .solved-category-badge {
+            color: #000000;
+        }
+
+        .solved-category.gradient-4 .solved-category-badge {
+            color: #ffffff;
         }
 
         /* Grid */
@@ -1257,6 +1288,11 @@
             margin-bottom: 12px;
         }
 
+        /* Hide header logo on landing page to avoid duplicate "Sorted." */
+        body.on-landing-page .logo {
+            visibility: hidden;
+        }
+
         .landing-subtitle {
             font-size: 1rem;
             color: var(--text-secondary);
@@ -1396,42 +1432,14 @@
             display: none;
         }
 
-        /* Submit puzzle link */
-        .submit-puzzle-link {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding-bottom: env(safe-area-inset-bottom, 0);
-            z-index: 100;
-        }
-
-        .submit-puzzle-btn {
-            background: transparent;
-            border: 2px solid var(--border-tile);
-            color: var(--text-muted);
-            padding: 10px 16px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-
-        .submit-puzzle-btn:hover {
-            border-color: var(--text-secondary);
-            color: var(--text-secondary);
-        }
-
-        .submit-puzzle-link.hidden {
-            display: none;
-        }
 
         /* Puzzle submission modal */
         .submission-modal {
             max-width: 500px;
             max-height: 90vh;
+            max-height: 90dvh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .submission-form {
@@ -1923,9 +1931,22 @@
             <div class="logo">Sorted.</div>
         </div>
         <div class="header-actions">
+            <button class="header-btn hidden" id="submitPuzzleBtn" aria-label="Submit a puzzle">Submit</button>
             <button class="header-btn" id="archiveBtn" aria-label="Archive">Past Puzzles</button>
             <button class="header-btn" id="rulesBtn" aria-label="How to play">How to Play</button>
             <button class="header-btn" id="statsBtn" aria-label="Statistics">Stats</button>
+            <button class="header-btn icon-btn" id="soundBtn" aria-label="Toggle sound">
+                <svg class="sound-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+                <svg class="sound-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <line x1="23" y1="9" x2="17" y2="15"/>
+                    <line x1="17" y1="9" x2="23" y2="15"/>
+                </svg>
+            </button>
         </div>
     </header>
 
@@ -2197,11 +2218,6 @@
         </div>
     </div>
 
-    <!-- Submit Puzzle Button (auth users only) -->
-    <div class="submit-puzzle-link hidden" id="submitPuzzleLink">
-        <button class="submit-puzzle-btn" id="submitPuzzleBtn">Submit a Puzzle</button>
-    </div>
-
     <!-- Puzzle Submission Modal -->
     <div class="modal-overlay" id="submissionModal">
         <div class="modal submission-modal">
@@ -2349,6 +2365,104 @@
         let gameOver = false;
         let guessHistory = [];
         let puzzleNumber = 1;
+
+        // ===== SOUND SYSTEM =====
+        let audioContext = null;
+        let soundEnabled = localStorage.getItem('sound-enabled') !== 'false';
+
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            return audioContext;
+        }
+
+        function playTone(frequency, duration, type = 'sine', volume = 0.3) {
+            if (!soundEnabled) return;
+            try {
+                const ctx = initAudioContext();
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                oscillator.frequency.value = frequency;
+                oscillator.type = type;
+
+                gainNode.gain.setValueAtTime(volume, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + duration);
+            } catch (e) {
+                console.log('Sound error:', e);
+            }
+        }
+
+        function playChord(frequencies, duration, type = 'sine', volume = 0.15) {
+            frequencies.forEach(freq => playTone(freq, duration, type, volume));
+        }
+
+        const sounds = {
+            select: () => playTone(880, 0.08, 'sine', 0.2),
+            deselect: () => playTone(440, 0.06, 'sine', 0.15),
+            correct: () => {
+                playChord([523.25, 659.25, 783.99], 0.3, 'sine', 0.15); // C major chord
+            },
+            wrong: () => {
+                playTone(220, 0.15, 'square', 0.15);
+                setTimeout(() => playTone(196, 0.2, 'square', 0.15), 100);
+            },
+            oneAway: () => {
+                playTone(440, 0.1, 'triangle', 0.2);
+                setTimeout(() => playTone(440, 0.1, 'triangle', 0.2), 150);
+            },
+            shuffle: () => {
+                [0, 30, 60].forEach((delay, i) => {
+                    setTimeout(() => playTone(300 + i * 50, 0.05, 'sine', 0.1), delay);
+                });
+            },
+            complete: () => {
+                // Victory fanfare - ascending arpeggio
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+                notes.forEach((freq, i) => {
+                    setTimeout(() => playTone(freq, 0.25, 'sine', 0.2), i * 120);
+                });
+            },
+            lose: () => {
+                // Descending sad tones
+                const notes = [392, 349.23, 329.63, 293.66]; // G F E D
+                notes.forEach((freq, i) => {
+                    setTimeout(() => playTone(freq, 0.2, 'triangle', 0.15), i * 150);
+                });
+            }
+        };
+
+        function updateSoundButtonUI() {
+            const btn = document.getElementById('soundBtn');
+            const soundOnIcon = btn.querySelector('.sound-on');
+            const soundOffIcon = btn.querySelector('.sound-off');
+            if (soundEnabled) {
+                soundOnIcon.classList.remove('hidden');
+                soundOffIcon.classList.add('hidden');
+            } else {
+                soundOnIcon.classList.add('hidden');
+                soundOffIcon.classList.remove('hidden');
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            localStorage.setItem('sound-enabled', soundEnabled);
+            updateSoundButtonUI();
+            if (soundEnabled) {
+                sounds.select(); // Play a quick sound to confirm
+            }
+        }
 
         // ===== DOM ELEMENTS =====
         const loadingEl = document.getElementById('loading');
@@ -3000,6 +3114,62 @@
             toast.textContent = message;
             toastContainer.appendChild(toast);
             setTimeout(() => toast.remove(), 2000);
+        }
+
+        // ===== CLIPBOARD =====
+        async function copyToClipboard(text, button) {
+            let success = false;
+
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    success = true;
+                } catch (e) {
+                    console.log('Clipboard API failed, trying fallback');
+                }
+            }
+
+            // Fallback for older browsers and iOS Safari
+            if (!success) {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    textarea.style.top = '0';
+                    textarea.setAttribute('readonly', '');
+                    document.body.appendChild(textarea);
+
+                    // iOS Safari specific handling
+                    const range = document.createRange();
+                    range.selectNodeContents(textarea);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    textarea.setSelectionRange(0, textarea.value.length);
+
+                    success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                } catch (e) {
+                    console.error('Fallback copy failed:', e);
+                }
+            }
+
+            // Show inline confirmation on the button
+            if (success && button) {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 2000);
+            } else if (!success) {
+                showToast('Could not copy');
+            }
+
+            return success;
         }
 
         // ===== PARTICLES =====
@@ -3666,8 +3836,10 @@
 
             if (selectedWords.includes(word)) {
                 selectedWords = selectedWords.filter(w => w !== word);
+                sounds.deselect();
             } else if (selectedWords.length < 4) {
                 selectedWords.push(word);
+                sounds.select();
             }
 
             renderGrid();
@@ -3727,6 +3899,7 @@
 
             // Add solving animation
             tiles.forEach(tile => tile.classList.add('solving'));
+            sounds.correct();
 
             await sleep(400);
 
@@ -3757,6 +3930,11 @@
             const tiles = document.querySelectorAll('.tile.selected');
 
             tiles.forEach(tile => tile.classList.add('shake'));
+            if (isOneAway) {
+                sounds.oneAway();
+            } else {
+                sounds.wrong();
+            }
             await sleep(500);
             tiles.forEach(tile => tile.classList.remove('shake'));
 
@@ -3778,6 +3956,7 @@
 
         async function handleWin() {
             gameOver = true;
+            sounds.complete();
 
             const stats = getStats();
 
@@ -3823,6 +4002,7 @@
 
         async function handleLoss() {
             gameOver = true;
+            sounds.lose();
 
             const stats = getStats();
 
@@ -3920,7 +4100,7 @@
             const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
 
             if (isAuthenticatedUser()) {
-                if (cachedLeaderboards.length > 0) {
+                if (playerLeagues.length > 0) {
                     // Has leagues - show View Leagues
                     viewLeaguesBtn.classList.remove('hidden');
                     createLeagueBtnEnd.classList.add('hidden');
@@ -3995,7 +4175,7 @@
                 }
             }
 
-            return `Connections UK #${puzzleNumber} ${emoji}\n\n${grid.trim()}\n\nPlay at: ${window.location.origin}`;
+            return `Sorted. #${puzzleNumber} ${emoji}\n\n${grid.trim()}\n\nPlay at: ${window.location.origin}`;
         }
 
         async function handleShare() {
@@ -4041,6 +4221,7 @@
 
         function handleShuffle() {
             if (gameOver) return;
+            sounds.shuffle();
             remainingWords = shuffle(remainingWords);
             renderGrid();
         }
@@ -4222,6 +4403,11 @@
                 openModal(archiveModal);
             });
 
+            // Sound toggle
+            const soundBtn = document.getElementById('soundBtn');
+            soundBtn.addEventListener('click', toggleSound);
+            updateSoundButtonUI();
+
             // Re-scale text on window resize
             window.addEventListener('resize', () => {
                 scaleTileText();
@@ -4256,7 +4442,11 @@
                 resetCreateLeagueModal();
             });
 
-            viewLeaguesBtn.addEventListener('click', () => {
+            viewLeaguesBtn.addEventListener('click', async () => {
+                // Ensure leaderboards are loaded
+                if (cachedLeaderboards.length === 0 && playerLeagues.length > 0) {
+                    cachedLeaderboards = await fetchLeaderboards();
+                }
                 if (cachedLeaderboards.length > 0) {
                     renderLeagueModal(0);
                     openModal(document.getElementById('viewLeaguesModal'));
@@ -4322,24 +4512,14 @@
                 }
             });
 
-            copyLeagueUrl.addEventListener('click', async () => {
-                try {
-                    await navigator.clipboard.writeText(leagueUrlInput.value);
-                    showToast('Link copied!');
-                } catch {
-                    showToast('Could not copy');
-                }
+            copyLeagueUrl.addEventListener('click', async (e) => {
+                await copyToClipboard(leagueUrlInput.value, e.currentTarget);
             });
 
             // Copy league code
-            document.getElementById('copyLeagueCode').addEventListener('click', async () => {
+            document.getElementById('copyLeagueCode').addEventListener('click', async (e) => {
                 const code = document.getElementById('leagueCodeDisplay').textContent;
-                try {
-                    await navigator.clipboard.writeText(code);
-                    showToast('Code copied!');
-                } catch {
-                    showToast('Could not copy');
-                }
+                await copyToClipboard(code, e.currentTarget);
             });
 
             // End screen Create League button
@@ -4524,11 +4704,25 @@
 
                 welcomeSubmit.disabled = true;
                 try {
-                    setPlayerName(name);
                     const userId = getCurrentUserId();
-                    if (userId) {
-                        await db.from('players').upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
+                    if (!userId) {
+                        showToast('Not signed in');
+                        return;
                     }
+
+                    // Save to Supabase first
+                    const { error: dbError } = await db
+                        .from('players')
+                        .upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
+
+                    if (dbError) {
+                        console.error('Database error saving name:', dbError);
+                        showToast('Failed to save name: ' + dbError.message);
+                        return;
+                    }
+
+                    // Only update local state after successful DB save
+                    setPlayerName(name);
                     closeModal(welcomeModal);
 
                     // Update landing page welcome message
@@ -4686,6 +4880,7 @@
             // Hide loading, show landing page
             loadingEl.classList.add('hidden');
             landingPage.classList.remove('hidden');
+            document.body.classList.add('on-landing-page');
 
             // Handle post-auth messaging
             if (returningFromMagicLink) {
@@ -4703,6 +4898,7 @@
             // Start game when Play is clicked
             async function startGame() {
                 landingPage.classList.add('hidden');
+                document.body.classList.remove('on-landing-page');
                 gameAreaEl.classList.remove('hidden');
 
                 if (hasPlayedToday) {
@@ -4737,7 +4933,6 @@
 
         // ===== PUZZLE SUBMISSION =====
         function initPuzzleSubmission() {
-            const submitPuzzleLink = document.getElementById('submitPuzzleLink');
             const submitPuzzleBtn = document.getElementById('submitPuzzleBtn');
             const submissionModal = document.getElementById('submissionModal');
             const submissionForm = document.getElementById('submissionForm');
@@ -4749,9 +4944,9 @@
             // Show submit button for authenticated users
             function updateSubmitButtonVisibility() {
                 if (isAuthenticatedUser()) {
-                    submitPuzzleLink.classList.remove('hidden');
+                    submitPuzzleBtn.classList.remove('hidden');
                 } else {
-                    submitPuzzleLink.classList.add('hidden');
+                    submitPuzzleBtn.classList.add('hidden');
                 }
             }
 
