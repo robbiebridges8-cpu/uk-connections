@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorted. Admin - Puzzle Management</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #0d0d0d;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #222222;
+            --border-color: #333333;
+            --border-light: #444444;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --accent: #F5D800;
+            --accent-hover: #ffe033;
+            --error: #ff4444;
+            --success: #44ff44;
+            --warning: #ffaa00;
+
+            /* Category colors */
+            --category-1: #F5D800;
+            --category-2: #6CC66C;
+            --category-3: #36DFE7;
+            --category-4: #7E4E7E;
+
+            /* Difficulty colors */
+            --difficulty-easy: #666666;
+            --difficulty-medium: #b8a000;
+            --difficulty-hard: #cc6600;
+            --difficulty-very-hard: #cc3333;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .login-subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .login-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .login-error {
+            color: var(--error);
+            font-size: 0.85rem;
+            margin-top: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+        }
+
+        /* Dashboard */
+        .dashboard {
+            display: none;
+            padding: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard.show {
+            display: block;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Summary Bar */
+        .summary-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .summary-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Warning Banner */
+        .warning-banner {
+            background: rgba(255, 170, 0, 0.15);
+            border: 1px solid var(--warning);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            display: none;
+            color: var(--warning);
+            font-weight: 500;
+        }
+
+        .warning-banner.show {
+            display: block;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-light);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #ff6666;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+
+        /* Table */
+        .table-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--text-primary);
+        }
+
+        th.sorted::after {
+            content: ' ↑';
+        }
+
+        th.sorted.desc::after {
+            content: ' ↓';
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr.upcoming {
+            background: rgba(245, 216, 0, 0.05);
+        }
+
+        tr.today {
+            background: rgba(108, 198, 108, 0.1);
+        }
+
+        /* Status Badge */
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-past {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+        }
+
+        .status-today {
+            background: rgba(108, 198, 108, 0.2);
+            color: #6CC66C;
+        }
+
+        .status-upcoming {
+            background: rgba(245, 216, 0, 0.2);
+            color: var(--accent);
+        }
+
+        /* Difficulty Badge */
+        .difficulty-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .difficulty-easy {
+            background: var(--difficulty-easy);
+            color: #fff;
+        }
+
+        .difficulty-medium {
+            background: var(--difficulty-medium);
+            color: #000;
+        }
+
+        .difficulty-hard {
+            background: var(--difficulty-hard);
+            color: #fff;
+        }
+
+        .difficulty-very-hard {
+            background: var(--difficulty-very-hard);
+            color: #fff;
+        }
+
+        /* Category cell */
+        .category-cell {
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
+        /* Actions cell */
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Delete confirmation */
+        .delete-confirm {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        .delete-confirm.show {
+            display: flex;
+        }
+
+        .delete-confirm-text {
+            color: var(--error);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1000px;
+            margin: 40px 0;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 800px) {
+            .modal-body {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Form */
+        .form-section {
+            margin-bottom: 24px;
+        }
+
+        .form-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-section-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input, .form-select {
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-input.error, .form-select.error {
+            border-color: var(--error);
+        }
+
+        .form-input.word-input {
+            text-transform: uppercase;
+        }
+
+        .form-error {
+            color: var(--error);
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .form-error.show {
+            display: block;
+        }
+
+        /* Category Section in Form */
+        .category-form {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .category-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #000;
+        }
+
+        .tier-selector {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tier-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            opacity: 0.4;
+            transition: all 0.2s;
+        }
+
+        .tier-btn:hover {
+            opacity: 0.7;
+        }
+
+        .tier-btn.selected {
+            opacity: 1;
+            border-color: #fff;
+        }
+
+        .tier-1 { background: var(--category-1); }
+        .tier-2 { background: var(--category-2); }
+        .tier-3 { background: var(--category-3); }
+        .tier-4 { background: var(--category-4); }
+
+        .words-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .words-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Preview Panel */
+        .preview-panel {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 20px;
+            position: sticky;
+            top: 20px;
+        }
+
+        .preview-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .preview-tile {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px 6px;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-category {
+            grid-column: span 4;
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .preview-category-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .preview-category-words {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        .preview-cat-1 { background: var(--category-1); color: #000; }
+        .preview-cat-2 { background: var(--category-2); color: #000; }
+        .preview-cat-3 { background: var(--category-3); color: #000; }
+        .preview-cat-4 { background: var(--category-4); color: #fff; }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        /* Error State */
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 16px;
+            color: var(--error);
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        /* Logout button */
+        .logout-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .logout-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <h1 class="login-title">Sorted. Admin</h1>
+            <p class="login-subtitle">Enter the admin password to continue</p>
+            <input type="password" id="passwordInput" class="login-input" placeholder="Password" autofocus>
+            <button id="loginBtn" class="login-btn">Login</button>
+            <p id="loginError" class="login-error">Incorrect password. Please try again.</p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1 class="header-title">Puzzle Management</h1>
+            <div class="header-actions">
+                <button id="addPuzzleBtn" class="btn btn-primary">+ Add Puzzle</button>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="error-message"></div>
+
+        <!-- Warning Banner -->
+        <div id="warningBanner" class="warning-banner"></div>
+
+        <!-- Summary Bar -->
+        <div class="summary-bar">
+            <div class="summary-card">
+                <div class="summary-value" id="totalPuzzles">-</div>
+                <div class="summary-label">Total Puzzles</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="upcomingPuzzles">-</div>
+                <div class="summary-label">Upcoming</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="bufferDays">-</div>
+                <div class="summary-label">Days of Buffer</div>
+            </div>
+        </div>
+
+        <!-- Puzzle Table -->
+        <div class="table-container">
+            <div class="table-scroll">
+                <table id="puzzleTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="date" class="sorted">Date</th>
+                            <th data-sort="difficulty">Difficulty</th>
+                            <th>Category 1</th>
+                            <th>Category 2</th>
+                            <th>Category 3</th>
+                            <th>Category 4</th>
+                            <th data-sort="author">Author</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="puzzleTableBody">
+                        <tr>
+                            <td colspan="9" class="loading">Loading puzzles...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div id="puzzleModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Add Puzzle</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Form Side -->
+                <div class="form-side">
+                    <div class="form-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Date *</label>
+                                <input type="date" id="puzzleDate" class="form-input">
+                                <span id="dateError" class="form-error">Date is required and must be unique</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Overall Difficulty</label>
+                                <select id="puzzleDifficulty" class="form-select">
+                                    <option value="">-- Select --</option>
+                                    <option value="easy">Easy</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="hard">Hard</option>
+                                    <option value="very_hard">Very Hard</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Author Name</label>
+                                <input type="text" id="puzzleAuthor" class="form-input" placeholder="Optional">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div id="categoriesContainer"></div>
+
+                    <span id="wordsError" class="form-error">All 16 words must be unique</span>
+                </div>
+
+                <!-- Preview Side -->
+                <div class="preview-panel">
+                    <div class="preview-title">Live Preview</div>
+                    <div id="previewGrid" class="preview-grid"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelBtn" class="btn btn-secondary">Cancel</button>
+                <button id="saveBtn" class="btn btn-primary">Save Puzzle</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // ===== CONFIGURATION =====
+        const SUPABASE_URL = 'NETLIFY_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'NETLIFY_SUPABASE_ANON_KEY';
+        const ADMIN_PASSWORD = 'NETLIFY_ADMIN_PASSWORD';
+
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const CATEGORY_COLORS = ['#F5D800', '#6CC66C', '#36DFE7', '#7E4E7E'];
+        const DIFFICULTY_LABELS = {
+            'easy': 'Easy',
+            'medium': 'Medium',
+            'hard': 'Hard',
+            'very_hard': 'Very Hard'
+        };
+
+        // ===== STATE =====
+        let puzzles = [];
+        let editingPuzzleId = null;
+        let sortColumn = 'date';
+        let sortDesc = false;
+
+        // ===== DOM ELEMENTS =====
+        const loginScreen = document.getElementById('loginScreen');
+        const dashboard = document.getElementById('dashboard');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginError = document.getElementById('loginError');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const addPuzzleBtn = document.getElementById('addPuzzleBtn');
+        const puzzleModal = document.getElementById('puzzleModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalClose = document.getElementById('modalClose');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const puzzleTableBody = document.getElementById('puzzleTableBody');
+        const errorMessage = document.getElementById('errorMessage');
+        const warningBanner = document.getElementById('warningBanner');
+        const totalPuzzlesEl = document.getElementById('totalPuzzles');
+        const upcomingPuzzlesEl = document.getElementById('upcomingPuzzles');
+        const bufferDaysEl = document.getElementById('bufferDays');
+        const categoriesContainer = document.getElementById('categoriesContainer');
+        const previewGrid = document.getElementById('previewGrid');
+
+        // ===== UTILITIES =====
+        function getTodayString() {
+            const now = new Date();
+            return now.toISOString().split('T')[0];
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-GB', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        function getStatus(dateStr) {
+            const today = getTodayString();
+            if (dateStr === today) return 'today';
+            if (dateStr > today) return 'upcoming';
+            return 'past';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+            setTimeout(() => errorMessage.classList.remove('show'), 5000);
+        }
+
+        // ===== AUTHENTICATION =====
+        function checkAuth() {
+            const isAuthenticated = sessionStorage.getItem('adminAuthenticated') === 'true';
+            if (isAuthenticated) {
+                showDashboard();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            loginScreen.style.display = 'flex';
+            dashboard.classList.remove('show');
+            passwordInput.focus();
+        }
+
+        function showDashboard() {
+            loginScreen.style.display = 'none';
+            dashboard.classList.add('show');
+            loadPuzzles();
+        }
+
+        function handleLogin() {
+            const password = passwordInput.value;
+            if (password === ADMIN_PASSWORD) {
+                sessionStorage.setItem('adminAuthenticated', 'true');
+                loginError.classList.remove('show');
+                showDashboard();
+            } else {
+                loginError.classList.add('show');
+                passwordInput.value = '';
+                passwordInput.focus();
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('adminAuthenticated');
+            showLogin();
+            passwordInput.value = '';
+        }
+
+        // ===== DATA LOADING =====
+        async function loadPuzzles() {
+            try {
+                puzzleTableBody.innerHTML = '<tr><td colspan="9" class="loading">Loading puzzles...</td></tr>';
+
+                const { data, error } = await db
+                    .from('puzzles')
+                    .select('*')
+                    .order('date', { ascending: true });
+
+                if (error) throw error;
+
+                puzzles = data || [];
+                updateSummary();
+                renderTable();
+            } catch (error) {
+                console.error('Error loading puzzles:', error);
+                showError('Failed to load puzzles: ' + error.message);
+                puzzleTableBody.innerHTML = '<tr><td colspan="9" class="loading">Failed to load puzzles</td></tr>';
+            }
+        }
+
+        function updateSummary() {
+            const today = getTodayString();
+            const upcoming = puzzles.filter(p => p.date > today);
+            const total = puzzles.length;
+
+            totalPuzzlesEl.textContent = total;
+            upcomingPuzzlesEl.textContent = upcoming.length;
+            bufferDaysEl.textContent = upcoming.length;
+
+            // Show warning if less than 7 days of puzzles
+            if (upcoming.length < 7) {
+                warningBanner.textContent = `Warning - only ${upcoming.length} day${upcoming.length !== 1 ? 's' : ''} of puzzles remaining.`;
+                warningBanner.classList.add('show');
+            } else {
+                warningBanner.classList.remove('show');
+            }
+        }
+
+        function sortPuzzles() {
+            const sorted = [...puzzles].sort((a, b) => {
+                let aVal, bVal;
+
+                switch (sortColumn) {
+                    case 'date':
+                        aVal = a.date;
+                        bVal = b.date;
+                        break;
+                    case 'difficulty':
+                        aVal = a.difficulty || '';
+                        bVal = b.difficulty || '';
+                        break;
+                    case 'author':
+                        aVal = a.author_name || '';
+                        bVal = b.author_name || '';
+                        break;
+                    default:
+                        aVal = a.date;
+                        bVal = b.date;
+                }
+
+                if (aVal < bVal) return sortDesc ? 1 : -1;
+                if (aVal > bVal) return sortDesc ? -1 : 1;
+                return 0;
+            });
+
+            return sorted;
+        }
+
+        function renderTable() {
+            const sorted = sortPuzzles();
+
+            if (sorted.length === 0) {
+                puzzleTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📝</div>
+                                <p>No puzzles yet. Add your first puzzle to get started.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            puzzleTableBody.innerHTML = sorted.map(puzzle => {
+                const status = getStatus(puzzle.date);
+                const categories = puzzle.categories || [];
+
+                return `
+                    <tr class="${status}" data-id="${puzzle.id}">
+                        <td><strong>${formatDate(puzzle.date)}</strong></td>
+                        <td>
+                            ${puzzle.difficulty ? `<span class="difficulty-badge difficulty-${puzzle.difficulty.replace('_', '-')}">${DIFFICULTY_LABELS[puzzle.difficulty] || puzzle.difficulty}</span>` : '-'}
+                        </td>
+                        <td class="category-cell">${categories[0]?.title || '-'}</td>
+                        <td class="category-cell">${categories[1]?.title || '-'}</td>
+                        <td class="category-cell">${categories[2]?.title || '-'}</td>
+                        <td class="category-cell">${categories[3]?.title || '-'}</td>
+                        <td>${puzzle.author_name || '-'}</td>
+                        <td>
+                            <span class="status-badge status-${status}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                        </td>
+                        <td>
+                            <div class="actions-cell" id="actions-${puzzle.id}">
+                                <button class="btn btn-secondary btn-small" onclick="editPuzzle('${puzzle.id}')">Edit</button>
+                                <button class="btn btn-danger btn-small" onclick="showDeleteConfirm('${puzzle.id}')">Delete</button>
+                            </div>
+                            <div class="delete-confirm" id="confirm-${puzzle.id}">
+                                <span class="delete-confirm-text">Delete puzzle for ${puzzle.date}?</span>
+                                <button class="btn btn-danger btn-small" onclick="confirmDelete('${puzzle.id}')">Confirm</button>
+                                <button class="btn btn-secondary btn-small" onclick="cancelDelete('${puzzle.id}')">Cancel</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Update sort indicators
+            document.querySelectorAll('th[data-sort]').forEach(th => {
+                th.classList.remove('sorted', 'desc');
+                if (th.dataset.sort === sortColumn) {
+                    th.classList.add('sorted');
+                    if (sortDesc) th.classList.add('desc');
+                }
+            });
+        }
+
+        // ===== DELETE HANDLING =====
+        function showDeleteConfirm(id) {
+            document.getElementById(`actions-${id}`).style.display = 'none';
+            document.getElementById(`confirm-${id}`).classList.add('show');
+        }
+
+        function cancelDelete(id) {
+            document.getElementById(`actions-${id}`).style.display = 'flex';
+            document.getElementById(`confirm-${id}`).classList.remove('show');
+        }
+
+        async function confirmDelete(id) {
+            try {
+                const { error } = await db
+                    .from('puzzles')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                await loadPuzzles();
+            } catch (error) {
+                console.error('Error deleting puzzle:', error);
+                showError('Failed to delete puzzle: ' + error.message);
+                cancelDelete(id);
+            }
+        }
+
+        // ===== MODAL HANDLING =====
+        function openModal(isEdit = false) {
+            editingPuzzleId = null;
+            modalTitle.textContent = isEdit ? 'Edit Puzzle' : 'Add Puzzle';
+            puzzleModal.classList.add('show');
+            renderCategoryForms();
+            updatePreview();
+
+            if (!isEdit) {
+                document.getElementById('puzzleDate').value = '';
+                document.getElementById('puzzleDifficulty').value = '';
+                document.getElementById('puzzleAuthor').value = '';
+            }
+        }
+
+        function closeModal() {
+            puzzleModal.classList.remove('show');
+            clearErrors();
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.form-error').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('.form-input.error, .form-select.error').forEach(el => el.classList.remove('error'));
+        }
+
+        function renderCategoryForms() {
+            categoriesContainer.innerHTML = [1, 2, 3, 4].map(num => `
+                <div class="category-form" data-category="${num}">
+                    <div class="category-header">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="category-number" style="background: ${CATEGORY_COLORS[num - 1]}">${num}</div>
+                            <input type="text" class="form-input" id="cat${num}Title" placeholder="Category title" style="width: 200px;">
+                        </div>
+                        <div class="tier-selector">
+                            ${[1, 2, 3, 4].map(tier => `
+                                <button type="button" class="tier-btn tier-${tier} ${tier === num ? 'selected' : ''}"
+                                        onclick="selectTier(${num}, ${tier})"
+                                        data-tier="${tier}"
+                                        title="Difficulty ${tier}"></button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="words-grid">
+                        ${[1, 2, 3, 4].map(w => `
+                            <input type="text" class="form-input word-input" id="cat${num}Word${w}" placeholder="Word ${w}">
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add input listeners for live preview
+            categoriesContainer.querySelectorAll('.form-input').forEach(input => {
+                input.addEventListener('input', updatePreview);
+            });
+        }
+
+        function selectTier(categoryNum, tier) {
+            const container = document.querySelector(`.category-form[data-category="${categoryNum}"]`);
+            container.querySelectorAll('.tier-btn').forEach(btn => {
+                btn.classList.toggle('selected', parseInt(btn.dataset.tier) === tier);
+            });
+            container.dataset.selectedTier = tier;
+            updatePreview();
+        }
+
+        function getSelectedTier(categoryNum) {
+            const container = document.querySelector(`.category-form[data-category="${categoryNum}"]`);
+            const selected = container.querySelector('.tier-btn.selected');
+            return selected ? parseInt(selected.dataset.tier) : categoryNum;
+        }
+
+        function updatePreview() {
+            const categories = [];
+
+            for (let i = 1; i <= 4; i++) {
+                const title = document.getElementById(`cat${i}Title`)?.value || '';
+                const words = [1, 2, 3, 4].map(w =>
+                    (document.getElementById(`cat${i}Word${w}`)?.value || '').toUpperCase()
+                );
+                const tier = getSelectedTier(i);
+                categories.push({ title, words, tier });
+            }
+
+            // Sort by tier for preview
+            const sortedCategories = [...categories].sort((a, b) => a.tier - b.tier);
+
+            // Generate preview - show tiles or solved categories based on content
+            let previewHTML = '';
+
+            sortedCategories.forEach((cat, index) => {
+                const hasContent = cat.title || cat.words.some(w => w);
+                if (hasContent && cat.title && cat.words.every(w => w)) {
+                    // Show as solved category
+                    previewHTML += `
+                        <div class="preview-category preview-cat-${cat.tier}">
+                            <div class="preview-category-title">${cat.title}</div>
+                            <div class="preview-category-words">${cat.words.join(', ')}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            // If no complete categories, show word tiles
+            if (!previewHTML) {
+                const allWords = categories.flatMap(c => c.words).filter(w => w);
+                if (allWords.length > 0) {
+                    previewHTML = allWords.slice(0, 16).map(word =>
+                        `<div class="preview-tile">${word || ''}</div>`
+                    ).join('');
+                    // Pad with empty tiles if needed
+                    for (let i = allWords.length; i < 16; i++) {
+                        previewHTML += `<div class="preview-tile"></div>`;
+                    }
+                } else {
+                    // Show empty grid
+                    for (let i = 0; i < 16; i++) {
+                        previewHTML += `<div class="preview-tile"></div>`;
+                    }
+                }
+            }
+
+            previewGrid.innerHTML = previewHTML;
+        }
+
+        function editPuzzle(id) {
+            const puzzle = puzzles.find(p => p.id === id);
+            if (!puzzle) return;
+
+            editingPuzzleId = id;
+            openModal(true);
+
+            document.getElementById('puzzleDate').value = puzzle.date;
+            document.getElementById('puzzleDifficulty').value = puzzle.difficulty || '';
+            document.getElementById('puzzleAuthor').value = puzzle.author_name || '';
+
+            const categories = puzzle.categories || [];
+            categories.forEach((cat, index) => {
+                const num = index + 1;
+                document.getElementById(`cat${num}Title`).value = cat.title || '';
+                (cat.words || []).forEach((word, wIndex) => {
+                    const input = document.getElementById(`cat${num}Word${wIndex + 1}`);
+                    if (input) input.value = word || '';
+                });
+                selectTier(num, cat.difficulty || num);
+            });
+
+            updatePreview();
+        }
+
+        // ===== VALIDATION =====
+        function validateForm() {
+            clearErrors();
+            let isValid = true;
+
+            // Check date
+            const dateInput = document.getElementById('puzzleDate');
+            const dateValue = dateInput.value;
+            if (!dateValue) {
+                dateInput.classList.add('error');
+                document.getElementById('dateError').classList.add('show');
+                isValid = false;
+            }
+
+            // Check for unique date (unless editing same puzzle)
+            const existingPuzzle = puzzles.find(p => p.date === dateValue && p.id !== editingPuzzleId);
+            if (existingPuzzle) {
+                dateInput.classList.add('error');
+                document.getElementById('dateError').textContent = 'A puzzle already exists for this date';
+                document.getElementById('dateError').classList.add('show');
+                isValid = false;
+            }
+
+            // Check all category titles and words
+            const allWords = [];
+            for (let i = 1; i <= 4; i++) {
+                const titleInput = document.getElementById(`cat${i}Title`);
+                if (!titleInput.value.trim()) {
+                    titleInput.classList.add('error');
+                    isValid = false;
+                }
+
+                for (let w = 1; w <= 4; w++) {
+                    const wordInput = document.getElementById(`cat${i}Word${w}`);
+                    const word = wordInput.value.trim().toUpperCase();
+                    if (!word) {
+                        wordInput.classList.add('error');
+                        isValid = false;
+                    } else {
+                        allWords.push(word);
+                    }
+                }
+            }
+
+            // Check for unique words
+            const uniqueWords = new Set(allWords);
+            if (uniqueWords.size !== allWords.length) {
+                document.getElementById('wordsError').classList.add('show');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        async function savePuzzle() {
+            if (!validateForm()) return;
+
+            const date = document.getElementById('puzzleDate').value;
+            const difficulty = document.getElementById('puzzleDifficulty').value || null;
+            const authorName = document.getElementById('puzzleAuthor').value.trim() || null;
+
+            const categories = [];
+            for (let i = 1; i <= 4; i++) {
+                categories.push({
+                    title: document.getElementById(`cat${i}Title`).value.trim(),
+                    difficulty: getSelectedTier(i),
+                    words: [1, 2, 3, 4].map(w =>
+                        document.getElementById(`cat${i}Word${w}`).value.trim().toUpperCase()
+                    )
+                });
+            }
+
+            const puzzleData = {
+                date,
+                difficulty,
+                author_name: authorName,
+                is_user_submitted: !!authorName,
+                categories
+            };
+
+            try {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                let error;
+                if (editingPuzzleId) {
+                    // Update existing
+                    const result = await db
+                        .from('puzzles')
+                        .update(puzzleData)
+                        .eq('id', editingPuzzleId);
+                    error = result.error;
+                } else {
+                    // Insert new
+                    const result = await db
+                        .from('puzzles')
+                        .insert(puzzleData);
+                    error = result.error;
+                }
+
+                if (error) throw error;
+
+                closeModal();
+                await loadPuzzles();
+            } catch (error) {
+                console.error('Error saving puzzle:', error);
+                showError('Failed to save puzzle: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Puzzle';
+            }
+        }
+
+        // ===== EVENT LISTENERS =====
+        loginBtn.addEventListener('click', handleLogin);
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+
+        logoutBtn.addEventListener('click', handleLogout);
+        addPuzzleBtn.addEventListener('click', () => openModal(false));
+        modalClose.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        saveBtn.addEventListener('click', savePuzzle);
+
+        puzzleModal.addEventListener('click', (e) => {
+            if (e.target === puzzleModal) closeModal();
+        });
+
+        // Sort handling
+        document.querySelectorAll('th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                if (sortColumn === column) {
+                    sortDesc = !sortDesc;
+                } else {
+                    sortColumn = column;
+                    sortDesc = false;
+                }
+                renderTable();
+            });
+        });
+
+        // ===== INITIALIZATION =====
+        checkAuth();
+    </script>
+</body>
+</html>
