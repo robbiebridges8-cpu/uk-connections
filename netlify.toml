@@ -2,6 +2,12 @@
   command = "sed -i 's|NETLIFY_SUPABASE_URL|'\"$SUPABASE_URL\"'|g; s|NETLIFY_SUPABASE_ANON_KEY|'\"$SUPABASE_ANON_KEY\"'|g' index.html"
   publish = "."
 
+# Serve admin.html for /admin route
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
 # SPA fallback - serve index.html for all other routes
 [[redirects]]
   from = "/*"

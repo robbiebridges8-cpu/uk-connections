@@ -37,7 +37,8 @@ function getTodayString() {
 app.get('/api/config', (req, res) => {
     res.json({
         supabaseUrl: SUPABASE_URL,
-        supabaseAnonKey: SUPABASE_ANON_KEY
+        supabaseAnonKey: SUPABASE_ANON_KEY,
+        adminPassword: process.env.ADMIN_PASSWORD || ''
     });
 });
 
