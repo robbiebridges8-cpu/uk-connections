@@ -79,6 +79,11 @@
             background: #3367d6;
         }
 
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
         .login-error {
             color: #d93025;
             font-size: 12px;
@@ -149,6 +154,21 @@
 
         .save-status.error {
             color: #d93025;
+        }
+
+        .logout-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .logout-btn:hover {
+            background: #f5f5f5;
+            color: #333;
         }
 
         /* Warning Banner */
@@ -301,27 +321,33 @@
             min-width: 100px;
         }
 
-        td.title-cell {
+        td.category-cell {
             min-width: 140px;
         }
 
-        td.word-cell {
-            min-width: 90px;
+        td.words-cell {
+            min-width: 220px;
         }
 
-        td.tier-cell {
-            min-width: 50px;
+        td.words-cell input {
+            text-transform: uppercase;
         }
 
-        /* Category headers */
-        th.cat-header {
-            text-align: center;
-        }
+        /* Category colors */
+        th.yellow, td.yellow { background: #fff9c4; }
+        th.green, td.green { background: #c8e6c9; }
+        th.blue, td.blue { background: #b3e5fc; }
+        th.purple, td.purple { background: #e1bee7; }
 
-        th.cat-1 { background: #fff9c4; }
-        th.cat-2 { background: #c8e6c9; }
-        th.cat-3 { background: #b3e5fc; }
-        th.cat-4 { background: #e1bee7; }
+        tr.past td.yellow { background: #f5f5dc; }
+        tr.past td.green { background: #e0e0d0; }
+        tr.past td.blue { background: #d8e8f0; }
+        tr.past td.purple { background: #e8dce8; }
+
+        tr.today td.yellow { background: #fff59d; }
+        tr.today td.green { background: #a5d6a7; }
+        tr.today td.blue { background: #81d4fa; }
+        tr.today td.purple { background: #ce93d8; }
 
         /* Delete confirmation */
         .delete-bar {
@@ -442,6 +468,7 @@
             </div>
             <div class="header-right">
                 <span id="saveStatus" class="save-status"></span>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
             </div>
         </div>
 
@@ -456,35 +483,19 @@
                         <th class="row-num">#</th>
                         <th style="cursor:pointer" data-sort="date">Date</th>
                         <th>Difficulty</th>
+                        <th class="yellow">Yellow Category</th>
+                        <th class="yellow">Yellow Words</th>
+                        <th class="green">Green Category</th>
+                        <th class="green">Green Words</th>
+                        <th class="blue">Blue Category</th>
+                        <th class="blue">Blue Words</th>
+                        <th class="purple">Purple Category</th>
+                        <th class="purple">Purple Words</th>
                         <th>Author</th>
-                        <th class="cat-header cat-1">Cat 1 Title</th>
-                        <th class="cat-1">W1</th>
-                        <th class="cat-1">W2</th>
-                        <th class="cat-1">W3</th>
-                        <th class="cat-1">W4</th>
-                        <th class="cat-1">Tier</th>
-                        <th class="cat-header cat-2">Cat 2 Title</th>
-                        <th class="cat-2">W1</th>
-                        <th class="cat-2">W2</th>
-                        <th class="cat-2">W3</th>
-                        <th class="cat-2">W4</th>
-                        <th class="cat-2">Tier</th>
-                        <th class="cat-header cat-3">Cat 3 Title</th>
-                        <th class="cat-3">W1</th>
-                        <th class="cat-3">W2</th>
-                        <th class="cat-3">W3</th>
-                        <th class="cat-3">W4</th>
-                        <th class="cat-3">Tier</th>
-                        <th class="cat-header cat-4">Cat 4 Title</th>
-                        <th class="cat-4">W1</th>
-                        <th class="cat-4">W2</th>
-                        <th class="cat-4">W3</th>
-                        <th class="cat-4">W4</th>
-                        <th class="cat-4">Tier</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="28" class="loading">Loading...</td></tr>
+                    <tr><td colspan="12" class="loading">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -504,11 +515,13 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // ===== DEBUG =====
+        const DEBUG = false;
+        function debugLog(...args) { if (DEBUG) console.log(...args); }
+
         // ===== STATE =====
-        let db = null;
-        let adminPassword = '';
+        let adminToken = null;
         let puzzles = [];
         let selectedRowId = null;
         let sortAsc = true;
@@ -520,6 +533,7 @@
         const passwordInput = document.getElementById('passwordInput');
         const loginBtn = document.getElementById('loginBtn');
         const loginError = document.getElementById('loginError');
+        const logoutBtn = document.getElementById('logoutBtn');
         const searchInput = document.getElementById('searchInput');
         const saveStatus = document.getElementById('saveStatus');
         const warningBanner = document.getElementById('warningBanner');
@@ -571,51 +585,125 @@
         }
 
         // ===== AUTH =====
-        async function loadConfig() {
+        function getStoredToken() {
+            return sessionStorage.getItem('adminToken');
+        }
+
+        function storeToken(token) {
+            sessionStorage.setItem('adminToken', token);
+            adminToken = token;
+        }
+
+        function clearToken() {
+            sessionStorage.removeItem('adminToken');
+            adminToken = null;
+        }
+
+        async function verifyPassword(password) {
             try {
-                const res = await fetch('/api/config');
-                const config = await res.json();
-                db = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-                adminPassword = config.adminPassword;
-                return true;
+                const response = await fetch('/api/admin/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (!response.ok) {
+                    return { valid: false };
+                }
+
+                const data = await response.json();
+                return data;
             } catch (e) {
-                console.error('Failed to load config:', e);
-                return false;
+                console.error('Auth error:', e);
+                return { valid: false };
             }
         }
 
-        function checkAuth() {
-            return sessionStorage.getItem('adminAuth') === 'true';
-        }
+        async function handleLogin() {
+            const password = passwordInput.value;
+            if (!password) {
+                loginError.textContent = 'Please enter a password';
+                loginError.classList.add('show');
+                return;
+            }
 
-        function handleLogin() {
-            if (passwordInput.value === adminPassword) {
-                sessionStorage.setItem('adminAuth', 'true');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Verifying...';
+            loginError.classList.remove('show');
+
+            const result = await verifyPassword(password);
+
+            if (result.valid && result.token) {
+                storeToken(result.token);
                 loginOverlay.classList.add('hidden');
                 mainContent.style.display = 'block';
                 loadPuzzles();
             } else {
+                loginError.textContent = 'Incorrect password';
                 loginError.classList.add('show');
                 passwordInput.value = '';
                 passwordInput.focus();
+            }
+
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Login';
+        }
+
+        function handleLogout() {
+            clearToken();
+            mainContent.style.display = 'none';
+            loginOverlay.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordInput.focus();
+            puzzles = [];
+            selectedRowId = null;
+        }
+
+        // ===== API PROXY =====
+        async function adminQuery(table, operation, data = null, id = null, order = null) {
+            if (!adminToken) {
+                throw new Error('Not authenticated');
+            }
+
+            try {
+                const response = await fetch('/api/admin/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({ table, operation, data, id, order })
+                });
+
+                if (response.status === 401) {
+                    // Token expired, force re-login
+                    handleLogout();
+                    throw new Error('Session expired');
+                }
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Query failed');
+                }
+
+                return result;
+            } catch (e) {
+                console.error('Query error:', e);
+                throw e;
             }
         }
 
         // ===== DATA =====
         async function loadPuzzles() {
             try {
-                const { data, error } = await db
-                    .from('puzzles')
-                    .select('*')
-                    .order('date', { ascending: sortAsc });
-
-                if (error) throw error;
-                puzzles = data || [];
+                const result = await adminQuery('puzzles', 'select', null, null, { column: 'date', ascending: sortAsc });
+                puzzles = result.data || [];
                 updateWarningBanner();
                 renderTable();
             } catch (e) {
                 console.error('Failed to load puzzles:', e);
-                tableBody.innerHTML = '<tr><td colspan="28" class="loading">Failed to load puzzles</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="12" class="loading">Failed to load puzzles</td></tr>';
             }
         }
 
@@ -631,6 +719,13 @@
         }
 
         // ===== RENDER =====
+        function escapeHtml(str) {
+            if (str == null) return '';
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(str)));
+            return div.innerHTML;
+        }
+
         function renderTable() {
             let filtered = puzzles;
             if (searchTerm) {
@@ -648,23 +743,29 @@
             }
 
             if (filtered.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="28" class="loading">No puzzles found</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="12" class="loading">No puzzles found</td></tr>';
                 return;
             }
+
+            // Color mapping: index 0=yellow(tier1), 1=green(tier2), 2=blue(tier3), 3=purple(tier4)
+            const colorClasses = ['yellow', 'green', 'blue', 'purple'];
 
             tableBody.innerHTML = filtered.map((puzzle, idx) => {
                 const status = getRowStatus(puzzle.date);
                 const cats = puzzle.categories || [{}, {}, {}, {}];
                 const isSelected = puzzle.id === selectedRowId;
 
+                // Sort categories by difficulty/tier to ensure correct color mapping
+                const sortedCats = [...cats].sort((a, b) => (a.difficulty || 1) - (b.difficulty || 1));
+
                 return `
-                    <tr class="${status} ${isSelected ? 'selected' : ''}" data-id="${puzzle.id}">
-                        <td class="row-num" onclick="selectRow('${puzzle.id}')">${idx + 1}</td>
+                    <tr class="${status} ${isSelected ? 'selected' : ''}" data-id="${escapeHtml(puzzle.id)}">
+                        <td class="row-num" onclick="selectRow('${escapeHtml(puzzle.id)}')">${idx + 1}</td>
                         <td class="date-cell">
-                            <input type="date" value="${normalizeDate(puzzle.date)}" data-field="date" data-id="${puzzle.id}">
+                            <input type="date" value="${escapeHtml(normalizeDate(puzzle.date))}" data-field="date" data-id="${escapeHtml(puzzle.id)}">
                         </td>
                         <td class="difficulty-cell">
-                            <select data-field="difficulty" data-id="${puzzle.id}">
+                            <select data-field="difficulty" data-id="${escapeHtml(puzzle.id)}">
                                 <option value="">--</option>
                                 <option value="easy" ${puzzle.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
                                 <option value="medium" ${puzzle.difficulty === 'medium' ? 'selected' : ''}>Medium</option>
@@ -672,38 +773,23 @@
                                 <option value="very_hard" ${puzzle.difficulty === 'very_hard' ? 'selected' : ''}>Very Hard</option>
                             </select>
                         </td>
-                        <td class="author-cell">
-                            <input type="text" value="${puzzle.author_name || ''}" data-field="author_name" data-id="${puzzle.id}">
-                        </td>
-                        ${[0, 1, 2, 3].map(catIdx => {
-                            const cat = cats[catIdx] || {};
-                            const words = cat.words || ['', '', '', ''];
+                        ${[0, 1, 2, 3].map(colorIdx => {
+                            const cat = sortedCats[colorIdx] || {};
+                            const words = cat.words || [];
+                            const wordsStr = words.join(', ');
+                            const colorClass = colorClasses[colorIdx];
                             return `
-                                <td class="title-cell">
-                                    <input type="text" value="${cat.title || ''}" data-field="cat${catIdx}_title" data-id="${puzzle.id}">
+                                <td class="category-cell ${colorClass}">
+                                    <input type="text" value="${escapeHtml(cat.title || '')}" data-field="${colorClass}_title" data-id="${escapeHtml(puzzle.id)}">
                                 </td>
-                                <td class="word-cell">
-                                    <input type="text" class="word" value="${words[0] || ''}" data-field="cat${catIdx}_word0" data-id="${puzzle.id}">
-                                </td>
-                                <td class="word-cell">
-                                    <input type="text" class="word" value="${words[1] || ''}" data-field="cat${catIdx}_word1" data-id="${puzzle.id}">
-                                </td>
-                                <td class="word-cell">
-                                    <input type="text" class="word" value="${words[2] || ''}" data-field="cat${catIdx}_word2" data-id="${puzzle.id}">
-                                </td>
-                                <td class="word-cell">
-                                    <input type="text" class="word" value="${words[3] || ''}" data-field="cat${catIdx}_word3" data-id="${puzzle.id}">
-                                </td>
-                                <td class="tier-cell">
-                                    <select data-field="cat${catIdx}_tier" data-id="${puzzle.id}">
-                                        <option value="1" ${cat.difficulty === 1 ? 'selected' : ''}>1</option>
-                                        <option value="2" ${cat.difficulty === 2 ? 'selected' : ''}>2</option>
-                                        <option value="3" ${cat.difficulty === 3 ? 'selected' : ''}>3</option>
-                                        <option value="4" ${cat.difficulty === 4 ? 'selected' : ''}>4</option>
-                                    </select>
+                                <td class="words-cell ${colorClass}">
+                                    <input type="text" value="${escapeHtml(wordsStr)}" data-field="${colorClass}_words" data-id="${escapeHtml(puzzle.id)}" placeholder="WORD1, WORD2, WORD3, WORD4">
                                 </td>
                             `;
                         }).join('')}
+                        <td class="author-cell">
+                            <input type="text" value="${escapeHtml(puzzle.author_name || '')}" data-field="author_name" data-id="${escapeHtml(puzzle.id)}">
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -718,8 +804,6 @@
                     if (e.key === 'Enter') {
                         e.preventDefault();
                         el.blur();
-                    } else if (e.key === 'Tab') {
-                        // Let default tab behavior work
                     }
                 });
             });
@@ -732,17 +816,22 @@
             const field = el.dataset.field;
             let value = el.value;
 
-            // Auto-uppercase words
-            if (el.classList.contains('word')) {
-                value = value.toUpperCase();
-                el.value = value;
+            // Handle words cells specially
+            if (field.endsWith('_words')) {
+                const words = value.split(',').map(w => w.trim().toUpperCase()).filter(w => w);
+
+                if (words.length !== 4 && words.length !== 0) {
+                    el.classList.add('error');
+                    showStatus('Each category needs exactly 4 words', 'error');
+                    return;
+                }
+
+                el.value = words.join(', ');
             }
 
-            // Build full puzzle data from row
             const row = el.closest('tr');
             const puzzleData = buildPuzzleDataFromRow(row);
 
-            // Validate
             const validation = validatePuzzle(puzzleData, id);
             if (!validation.valid) {
                 el.classList.add('error');
@@ -753,7 +842,6 @@
             el.classList.remove('error');
             row.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
 
-            // Save
             await savePuzzle(id, puzzleData);
         }
 
@@ -763,8 +851,15 @@
                 date: '',
                 difficulty: null,
                 author_name: null,
-                categories: [{}, {}, {}, {}]
+                categories: [
+                    { title: '', difficulty: 1, words: [] },
+                    { title: '', difficulty: 2, words: [] },
+                    { title: '', difficulty: 3, words: [] },
+                    { title: '', difficulty: 4, words: [] }
+                ]
             };
+
+            const colorToIdx = { yellow: 0, green: 1, blue: 2, purple: 3 };
 
             inputs.forEach(input => {
                 const field = input.dataset.field;
@@ -776,27 +871,18 @@
                     data.difficulty = value || null;
                 } else if (field === 'author_name') {
                     data.author_name = value || null;
-                } else if (field.startsWith('cat')) {
-                    const match = field.match(/cat(\d)_(\w+)(\d?)/);
-                    if (match) {
-                        const catIdx = parseInt(match[1]);
-                        const prop = match[2];
-                        const wordIdx = match[3] ? parseInt(match[3]) : null;
-
-                        if (!data.categories[catIdx]) {
-                            data.categories[catIdx] = { title: '', difficulty: catIdx + 1, words: ['', '', '', ''] };
-                        }
-
-                        if (prop === 'title') {
-                            data.categories[catIdx].title = value;
-                        } else if (prop === 'tier') {
-                            data.categories[catIdx].difficulty = parseInt(value) || catIdx + 1;
-                        } else if (prop === 'word' && wordIdx !== null) {
-                            if (!data.categories[catIdx].words) {
-                                data.categories[catIdx].words = ['', '', '', ''];
-                            }
-                            data.categories[catIdx].words[wordIdx] = value.toUpperCase();
-                        }
+                } else if (field.endsWith('_title')) {
+                    const color = field.replace('_title', '');
+                    const idx = colorToIdx[color];
+                    if (idx !== undefined) {
+                        data.categories[idx].title = value;
+                    }
+                } else if (field.endsWith('_words')) {
+                    const color = field.replace('_words', '');
+                    const idx = colorToIdx[color];
+                    if (idx !== undefined) {
+                        const words = value.split(',').map(w => w.trim().toUpperCase()).filter(w => w);
+                        data.categories[idx].words = words;
                     }
                 }
             });
@@ -805,28 +891,30 @@
         }
 
         function validatePuzzle(data, currentId) {
-            // Check date
             if (!data.date) {
                 return { valid: false, error: 'Date is required' };
             }
 
-            // Check date uniqueness
             const existingWithDate = puzzles.find(p => normalizeDate(p.date) === data.date && p.id !== currentId);
             if (existingWithDate) {
                 return { valid: false, error: 'Date already exists' };
             }
 
-            // Collect all words
             const allWords = [];
-            for (const cat of data.categories) {
-                if (cat.words) {
-                    for (const word of cat.words) {
-                        if (word) allWords.push(word);
-                    }
+            const colorNames = ['Yellow', 'Green', 'Blue', 'Purple'];
+            for (let i = 0; i < data.categories.length; i++) {
+                const cat = data.categories[i];
+                const words = cat.words || [];
+
+                if (words.length > 0 && words.length !== 4) {
+                    return { valid: false, error: `${colorNames[i]} needs exactly 4 words` };
+                }
+
+                for (const word of words) {
+                    if (word) allWords.push(word);
                 }
             }
 
-            // Check for duplicate words
             const uniqueWords = new Set(allWords);
             if (uniqueWords.size !== allWords.length) {
                 return { valid: false, error: 'Duplicate words found' };
@@ -839,19 +927,13 @@
             showStatus('Saving...', 'saving');
 
             try {
-                const { error } = await db
-                    .from('puzzles')
-                    .update({
-                        date: data.date,
-                        difficulty: data.difficulty,
-                        author_name: data.author_name,
-                        categories: data.categories
-                    })
-                    .eq('id', id);
+                await adminQuery('puzzles', 'update', {
+                    date: data.date,
+                    difficulty: data.difficulty,
+                    author_name: data.author_name,
+                    categories: data.categories
+                }, id);
 
-                if (error) throw error;
-
-                // Update local state
                 const idx = puzzles.findIndex(p => p.id === id);
                 if (idx !== -1) {
                     puzzles[idx] = { ...puzzles[idx], ...data };
@@ -861,7 +943,7 @@
                 showStatus('Saved', 'saved');
             } catch (e) {
                 console.error('Save failed:', e);
-                showStatus('Error: ' + e.message, 'error');
+                showStatus('Error saving', 'error');
             }
         }
 
@@ -880,9 +962,9 @@
             }
             renderTable();
         }
+        window.selectRow = selectRow;
 
         async function addNewRow() {
-            // Find the next available date
             let nextDate = getTomorrowString();
             const existingDates = new Set(puzzles.map(p => normalizeDate(p.date)));
             while (existingDates.has(nextDate)) {
@@ -906,13 +988,8 @@
             showStatus('Adding...', 'saving');
 
             try {
-                const { data, error } = await db
-                    .from('puzzles')
-                    .insert(newPuzzle)
-                    .select()
-                    .single();
-
-                if (error) throw error;
+                const result = await adminQuery('puzzles', 'insert', newPuzzle);
+                const data = result.data;
 
                 puzzles.push(data);
                 puzzles.sort((a, b) => sortAsc
@@ -924,7 +1001,6 @@
                 renderTable();
                 showStatus('Added', 'saved');
 
-                // Focus the first cell of new row
                 setTimeout(() => {
                     const newRow = tableBody.querySelector(`tr[data-id="${data.id}"]`);
                     if (newRow) {
@@ -934,7 +1010,7 @@
                 }, 50);
             } catch (e) {
                 console.error('Add failed:', e);
-                showStatus('Error: ' + e.message, 'error');
+                showStatus('Error adding', 'error');
             }
         }
 
@@ -944,12 +1020,7 @@
             showStatus('Deleting...', 'saving');
 
             try {
-                const { error } = await db
-                    .from('puzzles')
-                    .delete()
-                    .eq('id', selectedRowId);
-
-                if (error) throw error;
+                await adminQuery('puzzles', 'delete', null, selectedRowId);
 
                 puzzles = puzzles.filter(p => p.id !== selectedRowId);
                 selectedRowId = null;
@@ -960,7 +1031,7 @@
                 showStatus('Deleted', 'saved');
             } catch (e) {
                 console.error('Delete failed:', e);
-                showStatus('Error: ' + e.message, 'error');
+                showStatus('Error deleting', 'error');
             }
         }
 
@@ -969,6 +1040,8 @@
         passwordInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') handleLogin();
         });
+
+        logoutBtn.addEventListener('click', handleLogout);
 
         searchInput.addEventListener('input', (e) => {
             searchTerm = e.target.value;
@@ -994,16 +1067,22 @@
 
         // ===== INIT =====
         async function init() {
-            const configLoaded = await loadConfig();
-            if (!configLoaded) {
-                alert('Failed to load configuration');
-                return;
-            }
-
-            if (checkAuth()) {
-                loginOverlay.classList.add('hidden');
-                mainContent.style.display = 'block';
-                loadPuzzles();
+            // Check for existing session
+            const storedToken = getStoredToken();
+            if (storedToken) {
+                adminToken = storedToken;
+                // Verify token is still valid by trying to load puzzles
+                try {
+                    await loadPuzzles();
+                    loginOverlay.classList.add('hidden');
+                    mainContent.style.display = 'block';
+                } catch (e) {
+                    // Token invalid, show login
+                    clearToken();
+                    passwordInput.focus();
+                }
+            } else {
+                passwordInput.focus();
             }
         }
 

@@ -42,7 +42,7 @@
             --category-1: #F5D800;  /* Easiest - yellow */
             --category-2: #6CC66C;  /* Easy - green */
             --category-3: #36DFE7;  /* Hard - cyan */
-            --category-4: #7E4E7E;  /* Hardest - purple */
+            --category-4: #886BB3;  /* Hardest - purple */
             --category-text-light: #000000;  /* Black text for light backgrounds */
             --category-text-dark: #ffffff;   /* Light text for dark backgrounds */
 
@@ -248,7 +248,7 @@
         .solved-category.gradient-1 { background: var(--category-1); color: var(--category-text-light); }
         .solved-category.gradient-2 { background: var(--category-2); color: var(--category-text-light); }
         .solved-category.gradient-3 { background: var(--category-3); color: var(--category-text-light); }
-        .solved-category.gradient-4 { background: var(--category-4); color: var(--category-text-dark); }
+        .solved-category.gradient-4 { background: var(--category-4); color: var(--category-text-light); }
 
         @keyframes solvedReveal {
             0% {
@@ -291,7 +291,7 @@
         }
 
         .solved-category.gradient-4 .solved-category-name {
-            color: #ffffff;
+            color: #000000;
         }
 
         .solved-category-name span {
@@ -313,7 +313,7 @@
         }
 
         .solved-category.gradient-4 .solved-category-words {
-            color: #ffffff;
+            color: #000000;
         }
 
         .solved-category-words span {
@@ -327,7 +327,7 @@
         }
 
         .solved-category.gradient-4 .solved-category-badge {
-            color: #ffffff;
+            color: #000000;
         }
 
         /* Grid */
@@ -1206,6 +1206,17 @@
             color: var(--text-secondary);
         }
 
+        /* End screen navigation */
+        .end-screen-nav {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            width: 100%;
+            max-width: 400px;
+        }
+
         /* Loading state */
         .loading {
             display: flex;
@@ -1942,7 +1953,7 @@
             <div class="logo">Sorted.</div>
         </div>
         <div class="header-actions">
-            <button class="header-btn hidden" id="submitPuzzleBtn" aria-label="Submit a puzzle">Submit</button>
+            <button class="header-btn hidden" id="submitPuzzleBtn" aria-label="Submit a puzzle">Submit a Puzzle</button>
             <button class="header-btn" id="archiveBtn" aria-label="Archive">Past Puzzles</button>
             <button class="header-btn" id="rulesBtn" aria-label="How to play">How to Play</button>
             <button class="header-btn" id="statsBtn" aria-label="Statistics">Stats</button>
@@ -2004,11 +2015,10 @@
             </div>
         </div>
 
-        <!-- League widget -->
+        <!-- League widget - only shown after puzzle completion -->
         <div class="league-widget hidden" id="leagueWidget">
             <div class="league-widget-header">
                 <span class="league-widget-title">Your Leagues</span>
-                <button class="league-widget-create" id="createLeagueBtn">+ Create League</button>
             </div>
             <div class="league-widget-list" id="leagueWidgetList">
                 <!-- Populated by JavaScript -->
@@ -2205,9 +2215,14 @@
         <div class="player-rankings hidden" id="playerRankings">
             <!-- Shows player's rank in each league -->
         </div>
+        <div class="end-screen-nav">
+            <button class="header-btn" id="endStatsBtn">Stats</button>
+            <button class="header-btn" id="endRulesBtn">How to Play</button>
+            <button class="header-btn" id="endArchiveBtn">Past Puzzles</button>
+            <button class="header-btn hidden" id="endSubmitPuzzleBtn">Submit a Puzzle</button>
+        </div>
         <div class="buttons-area" id="endScreenButtons">
             <button class="btn btn-secondary hidden" id="viewLeaguesBtn">View Leagues</button>
-            <button class="btn btn-secondary hidden" id="createLeagueBtnEnd">Create League</button>
             <button class="btn btn-secondary hidden" id="joinLeagueBtnEnd">Join League</button>
             <button class="btn btn-primary" id="shareBtn">Share Result</button>
         </div>
@@ -2229,6 +2244,10 @@
             <div class="league-indicator" id="leagueIndicator">1 / 3</div>
             <div class="leaderboard-list" id="leagueModalLeaderboard">
                 <!-- Populated by JavaScript -->
+            </div>
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-tile); display: flex; gap: 8px; justify-content: center;">
+                <button class="btn btn-secondary" id="createLeagueFromModal">+ Create League</button>
+                <button class="btn btn-secondary" id="joinLeagueFromModal">Join League</button>
             </div>
         </div>
     </div>
@@ -2324,6 +2343,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // ===== DEBUG =====
+        const DEBUG = false;
+        function debugLog(...args) { if (DEBUG) console.log(...args); }
+
+        // ===== SANITISATION =====
+        function sanitise(str) {
+            if (str == null) return '';
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(str)));
+            return div.innerHTML;
+        }
+
         // ===== CONFIGURATION =====
         const GRADIENT_CLASSES = ['gradient-1', 'gradient-2', 'gradient-3', 'gradient-4'];
         const PUZZLE_CACHE_KEY = 'cached-puzzle';
@@ -2341,7 +2372,7 @@
                 return; // Already reset
             }
 
-            console.log('Performing one-time localStorage reset...');
+            debugLog('Performing one-time localStorage reset...');
 
             // Clear all game-related localStorage keys
             const keysToRemove = [
@@ -2353,7 +2384,7 @@
 
             keysToRemove.forEach(key => {
                 localStorage.removeItem(key);
-                console.log(`  Removed: ${key}`);
+                debugLog('Removed:', key);
             });
 
             // Clear Supabase auth tokens (keys starting with sb-)
@@ -2361,13 +2392,13 @@
             allKeys.forEach(key => {
                 if (key.startsWith('sb-')) {
                     localStorage.removeItem(key);
-                    console.log(`  Removed Supabase key: ${key}`);
+                    debugLog('Removed Supabase key:', key);
                 }
             });
 
             // Set flag to prevent running again
             localStorage.setItem(RESET_FLAG, 'true');
-            console.log('localStorage reset complete!');
+            debugLog('localStorage reset complete!');
         })();
 
         // ===== STATE =====
@@ -2416,7 +2447,7 @@
                 oscillator.start(ctx.currentTime);
                 oscillator.stop(ctx.currentTime + duration);
             } catch (e) {
-                console.log('Sound error:', e);
+                debugLog('Sound error:', e);
             }
         }
 
@@ -2508,7 +2539,6 @@
         // League elements
         const leagueWidget = document.getElementById('leagueWidget');
         const leagueWidgetList = document.getElementById('leagueWidgetList');
-        const createLeagueBtn = document.getElementById('createLeagueBtn');
         const createLeagueModal = document.getElementById('createLeagueModal');
         const leagueNameInput = document.getElementById('leagueNameInput');
         const createLeagueSubmit = document.getElementById('createLeagueSubmit');
@@ -2575,7 +2605,7 @@
         // Fix 6: Fetch display name from Supabase for authenticated users
         async function fetchPlayerNameFromSupabase(userId) {
             try {
-                console.log('[Auth] Fetching display_name from Supabase for user:', userId);
+                debugLog('[Auth] Fetching display_name from Supabase for user:', userId);
                 const { data: player, error } = await db
                     .from('players')
                     .select('display_name')
@@ -2583,12 +2613,12 @@
                     .single();
 
                 if (error) {
-                    console.log('[Auth] No player record found or error:', error);
+                    debugLog('[Auth] No player record found or error:', error);
                     return null;
                 }
 
                 if (player?.display_name) {
-                    console.log('[Auth] Found display_name in Supabase:', player.display_name);
+                    debugLog('[Auth] Found display_name in Supabase:', player.display_name);
                     return player.display_name;
                 }
                 return null;
@@ -2599,12 +2629,12 @@
         }
 
         async function resolveAuthState() {
-            console.log('[Auth] resolveAuthState started');
+            debugLog('[Auth] resolveAuthState started');
 
             // Demo mode - skip all auth
             const useDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
             if (useDemo) {
-                console.log('[Demo] Skipping auth');
+                debugLog('[Demo] Skipping auth');
                 currentUser = { id: 'demo-user', is_anonymous: true };
                 authStateResolved = true;
                 return { success: true, user: currentUser };
@@ -2622,7 +2652,7 @@
             const code = urlParams.get('code');
 
             if (code) {
-                console.log('[Auth] Magic link code detected, exchanging for session');
+                debugLog('[Auth] Magic link code detected, exchanging for session');
                 returningFromMagicLink = true;
 
                 try {
@@ -2633,7 +2663,7 @@
                         // Clear URL and fall through to anonymous auth
                         window.history.replaceState({}, '', window.location.pathname);
                     } else {
-                        console.log('[Auth] Code exchange successful');
+                        debugLog('[Auth] Code exchange successful');
                         window.history.replaceState({}, '', window.location.pathname);
 
                         // Set the user immediately
@@ -2666,7 +2696,7 @@
 
             // 3. Check for existing session
             const { data: { session } } = await db.auth.getSession();
-            console.log('[Auth] Session check:', session?.user?.id, session?.user?.is_anonymous);
+            debugLog('[Auth] Session check:', session?.user?.id, session?.user?.is_anonymous);
 
             if (session?.user) {
                 currentUser = session.user;
@@ -2696,7 +2726,7 @@
             }
 
             // 4. No session - sign in anonymously
-            console.log('[Auth] No session, signing in anonymously');
+            debugLog('[Auth] No session, signing in anonymously');
             const { data, error } = await db.auth.signInAnonymously();
             if (error) {
                 console.error('[Auth] Anonymous auth error:', error);
@@ -2713,7 +2743,7 @@
         async function processPendingGameState() {
             // Fix 5: Prevent double processing
             if (pendingGameStateProcessed) {
-                console.log('[Auth] pendingGameState already processed, skipping');
+                debugLog('[Auth] pendingGameState already processed, skipping');
                 return;
             }
 
@@ -2724,7 +2754,7 @@
 
             try {
                 const state = JSON.parse(pendingState);
-                console.log('[Auth] Processing pending game state:', state);
+                debugLog('[Auth] Processing pending game state:', state);
 
                 // Migrate scores from anonymous user
                 if (state.anonymousUserId && state.anonymousUserId !== currentUser.id) {
@@ -2741,7 +2771,7 @@
                             guessHistory: state.guessHistory || []
                         };
                         saveStats(stats);
-                        console.log('[Auth] Game state restored to stats');
+                        debugLog('[Auth] Game state restored to stats');
                     }
                 }
 
@@ -2756,12 +2786,12 @@
         // Set up auth state change listener for future changes (sign out, token refresh, etc.)
         function setupAuthListener() {
             db.auth.onAuthStateChange(async (event, session) => {
-                console.log('[Auth] State changed:', event, session?.user?.id);
+                debugLog('[Auth] State changed:', event, session?.user?.id);
 
                 // Fix 4: Skip INITIAL_SESSION events until resolveAuthState completes
                 // This prevents race conditions where the listener fires before resolveAuthState finishes
                 if (event === 'INITIAL_SESSION' && !authStateResolved) {
-                    console.log('[Auth] Skipping INITIAL_SESSION - authState not yet resolved');
+                    debugLog('[Auth] Skipping INITIAL_SESSION - authState not yet resolved');
                     return;
                 }
 
@@ -2778,7 +2808,7 @@
 
                 // Handle upgrade from anonymous to authenticated (happens during session, not page load)
                 if (previousUser?.is_anonymous && currentUser && !currentUser.is_anonymous) {
-                    console.log('[Auth] User upgraded from anonymous to authenticated');
+                    debugLog('[Auth] User upgraded from anonymous to authenticated');
                     await processPendingGameState();
 
                     if (!playerName) {
@@ -2800,7 +2830,7 @@
             if (!needsDisplayNamePrompt) return;
             needsDisplayNamePrompt = false;
 
-            console.log('[Auth] Showing display name modal');
+            debugLog('[Auth] Showing display name modal');
             const modal = document.getElementById('welcomeModal');
             if (modal) {
                 openModal(modal);
@@ -2808,19 +2838,19 @@
         }
 
         async function handlePostAuthFlow() {
-            console.log('[Auth] handlePostAuthFlow called');
+            debugLog('[Auth] handlePostAuthFlow called');
 
             // Check for pending action from sessionStorage
             const storedAction = sessionStorage.getItem('pendingAuthAction');
             if (storedAction) {
-                console.log('[Auth] Found pending action:', storedAction);
+                debugLog('[Auth] Found pending action:', storedAction);
                 sessionStorage.removeItem('pendingAuthAction');
                 pendingAuthAction = JSON.parse(storedAction);
             }
 
             // If user doesn't have a display name, show welcome modal
             if (!playerName) {
-                console.log('[Auth] No player name, showing welcome modal');
+                debugLog('[Auth] No player name, showing welcome modal');
                 const modal = document.getElementById('welcomeModal');
                 if (modal) {
                     openModal(modal);
@@ -2837,7 +2867,7 @@
             const action = pendingAuthAction;
             pendingAuthAction = null;
 
-            console.log('Handling pending action:', action);
+            debugLog('Handling pending action:', action);
 
             if (action.type === 'create_league') {
                 // Reset and open create league modal
@@ -2880,11 +2910,11 @@
         async function migrateAnonymousScores(anonymousUserId, newUserId) {
             if (!anonymousUserId || !newUserId || anonymousUserId === newUserId) return;
 
-            console.log('[Migration] Starting migration from', anonymousUserId, 'to', newUserId);
+            debugLog('[Migration] Starting migration from', anonymousUserId, 'to', newUserId);
 
             try {
                 // Step 1: Update daily_scores
-                console.log('[Migration] Step 1: Updating daily_scores...');
+                debugLog('[Migration] Step 1: Updating daily_scores...');
                 const { error: scoresError } = await db
                     .from('daily_scores')
                     .update({ player_uuid: newUserId })
@@ -2896,10 +2926,10 @@
                     showToast("We couldn't fully sync your progress — please contact support");
                     return; // Halt - don't continue with partial migration
                 }
-                console.log('[Migration] Step 1 complete: daily_scores updated');
+                debugLog('[Migration] Step 1 complete: daily_scores updated');
 
                 // Step 2: Update league_memberships
-                console.log('[Migration] Step 2: Updating league_memberships...');
+                debugLog('[Migration] Step 2: Updating league_memberships...');
                 const { error: membershipsError } = await db
                     .from('league_memberships')
                     .update({ player_uuid: newUserId })
@@ -2911,10 +2941,10 @@
                     showToast("We couldn't fully sync your progress — please contact support");
                     return; // Halt
                 }
-                console.log('[Migration] Step 2 complete: league_memberships updated');
+                debugLog('[Migration] Step 2 complete: league_memberships updated');
 
                 // Step 3: Update players table
-                console.log('[Migration] Step 3: Updating players table...');
+                debugLog('[Migration] Step 3: Updating players table...');
                 const { error: playersError } = await db
                     .from('players')
                     .update({ uuid: newUserId })
@@ -2926,10 +2956,10 @@
                     showToast("We couldn't fully sync your progress — please contact support");
                     return; // Halt
                 }
-                console.log('[Migration] Step 3 complete: players updated');
+                debugLog('[Migration] Step 3 complete: players updated');
 
                 // All steps successful
-                console.log('[Migration] All steps complete - migration successful');
+                debugLog('[Migration] All steps complete - migration successful');
                 localStorage.removeItem('migrationFailed'); // Clear any previous failure flag
 
             } catch (e) {
@@ -2962,7 +2992,7 @@
                             guessHistory: result.guessHistory,
                             anonymousUserId: getCurrentUserId()
                         }));
-                        console.log('Saved pending game state for magic link flow');
+                        debugLog('Saved pending game state for magic link flow');
                     }
                 }
 
@@ -2975,7 +3005,7 @@
                 }
 
                 const redirectUrl = 'https://www.playconnectionsuk.co.uk';
-                console.log(`[${new Date().toISOString()}] Sending magic link to ${email}, redirect: ${redirectUrl}`);
+                debugLog(`[${new Date().toISOString()}] Sending magic link to ${email}, redirect: ${redirectUrl}`);
 
                 const { error } = await db.auth.signInWithOtp({
                     email,
@@ -2989,7 +3019,7 @@
                     throw error;
                 }
 
-                console.log(`[${new Date().toISOString()}] Magic link sent successfully to ${email}`);
+                debugLog(`[${new Date().toISOString()}] Magic link sent successfully to ${email}`);
 
                 // Show success
                 if (isModal) {
@@ -3084,7 +3114,7 @@
                 font-size: 0.9rem;
             `;
             banner.innerHTML = `
-                <div style="margin-bottom: 8px;">${message}</div>
+                <div style="margin-bottom: 8px;">${sanitise(message)}</div>
                 <button id="resendMagicLinkBtn" style="background: white; color: #ff4444; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; margin-right: 8px;">Request New Link</button>
                 <button id="dismissAuthError" style="background: transparent; color: white; border: 1px solid white; padding: 8px 16px; border-radius: 20px; cursor: pointer;">Dismiss</button>
             `;
@@ -3239,7 +3269,7 @@
                     await navigator.clipboard.writeText(text);
                     success = true;
                 } catch (e) {
-                    console.log('Clipboard API failed, trying fallback');
+                    debugLog('Clipboard API failed, trying fallback');
                 }
             }
 
@@ -3322,12 +3352,12 @@
         async function fetchStatsFromSupabase() {
             const userId = getCurrentUserId();
             if (!userId) {
-                console.log('[Stats] No user ID, cannot fetch from Supabase');
+                debugLog('[Stats] No user ID, cannot fetch from Supabase');
                 return null;
             }
 
             try {
-                console.log('[Stats] Fetching stats from Supabase for user:', userId);
+                debugLog('[Stats] Fetching stats from Supabase for user:', userId);
 
                 // Get all scores for this user
                 const { data: scores, error } = await db
@@ -3341,7 +3371,7 @@
                     return null;
                 }
 
-                console.log('[Stats] Fetched', scores?.length || 0, 'personal scores from Supabase');
+                debugLog('[Stats] Fetched', scores?.length || 0, 'personal scores from Supabase');
 
                 if (!scores || scores.length === 0) {
                     return {
@@ -3407,7 +3437,7 @@
                     maxStreak = Math.max(maxStreak, streak);
                 }
 
-                console.log('[Stats] Calculated from Supabase:', { playedCount, currentStreak, maxStreak, avgMistakes, perfectGames });
+                debugLog('[Stats] Calculated from Supabase:', { playedCount, currentStreak, maxStreak, avgMistakes, perfectGames });
 
                 return {
                     played: playedCount,
@@ -3427,7 +3457,7 @@
 
             if (isAuthenticatedUser()) {
                 // Authenticated users: fetch from Supabase
-                console.log('[Stats] User is authenticated, fetching from Supabase');
+                debugLog('[Stats] User is authenticated, fetching from Supabase');
                 statsData = await fetchStatsFromSupabase();
 
                 if (statsData) {
@@ -3439,11 +3469,11 @@
                     return;
                 }
                 // Fall through to localStorage if Supabase fetch failed
-                console.log('[Stats] Supabase fetch failed, falling back to localStorage');
+                debugLog('[Stats] Supabase fetch failed, falling back to localStorage');
             }
 
             // Anonymous users or fallback: use localStorage
-            console.log('[Stats] Using localStorage for stats');
+            debugLog('[Stats] Using localStorage for stats');
             const stats = getStats();
             const playedEntries = Object.values(stats.played);
             const playedCount = playedEntries.length;
@@ -3485,7 +3515,7 @@
         // Fix 1 & 2: Batched queries, no league_id in daily_scores
         async function fetchPlayerLeagues() {
             const userId = getCurrentUserId();
-            console.log('[Leagues] fetchPlayerLeagues called, userId:', userId);
+            debugLog('[Leagues] fetchPlayerLeagues called, userId:', userId);
             if (!userId) return [];
 
             try {
@@ -3502,7 +3532,7 @@
                     return [];
                 }
 
-                console.log('[Leagues] User memberships:', userMemberships);
+                debugLog('[Leagues] User memberships:', userMemberships);
 
                 if (!userMemberships || userMemberships.length === 0) {
                     playerLeagues = [];
@@ -3558,7 +3588,7 @@
                     };
                 });
 
-                console.log('[Leagues] Computed leagues:', leagues);
+                debugLog('[Leagues] Computed leagues:', leagues);
                 playerLeagues = leagues;
                 return playerLeagues;
 
@@ -3587,7 +3617,7 @@
             } else {
                 leagueWidgetList.innerHTML = leagues.map(league => `
                     <div class="league-widget-item">
-                        <span class="league-widget-name">${league.name}</span>
+                        <span class="league-widget-name">${sanitise(league.name)}</span>
                         <span class="league-widget-count">${league.played_today}/${league.total_members} played today</span>
                     </div>
                 `).join('');
@@ -3644,15 +3674,46 @@
             }
 
             try {
-                // Upsert player
-                await db
+                // Get fresh user ID directly from Supabase auth
+                const { data: authData, error: authError } = await db.auth.getUser();
+                const freshUserId = authData?.user?.id;
+                debugLog('[DisplayName] joinLeague - fresh userId from db.auth.getUser():', freshUserId);
+                debugLog('[DisplayName] joinLeague - cached userId:', userId);
+
+                if (!freshUserId) {
+                    console.error('[DisplayName] joinLeague - No user ID from auth:', authError);
+                    return false;
+                }
+
+                // Upsert player with enhanced logging
+                const upsertData = { uuid: freshUserId, display_name: playerName.trim() };
+                debugLog('[DisplayName] joinLeague - upserting data:', JSON.stringify(upsertData));
+
+                const { data: upsertResult, error: upsertError } = await db
                     .from('players')
-                    .upsert({ uuid: userId, display_name: playerName.trim() }, { onConflict: 'uuid' });
+                    .upsert(upsertData, { onConflict: 'uuid' })
+                    .select();
+
+                debugLog('[DisplayName] joinLeague - upsert response:', { data: upsertResult, error: upsertError });
+
+                if (upsertError) {
+                    console.error('[DisplayName] joinLeague - upsert failed:', upsertError);
+                    return false;
+                }
+
+                // Verify the write by fetching the player row
+                const { data: verifyData, error: verifyError } = await db
+                    .from('players')
+                    .select('uuid, display_name')
+                    .eq('uuid', freshUserId)
+                    .single();
+
+                debugLog('[DisplayName] joinLeague - verification fetch:', { data: verifyData, error: verifyError });
 
                 // Add membership if not exists
                 await db
                     .from('league_memberships')
-                    .upsert({ player_uuid: userId, league_id: leagueId }, { onConflict: 'player_uuid,league_id', ignoreDuplicates: true });
+                    .upsert({ player_uuid: freshUserId, league_id: leagueId }, { onConflict: 'player_uuid,league_id', ignoreDuplicates: true });
 
                 await fetchPlayerLeagues();
                 return true;
@@ -3667,16 +3728,16 @@
 
             // Only submit scores for authenticated users
             if (!userId) {
-                console.log('[Score] No user ID, skipping score submission');
+                debugLog('[Score] No user ID, skipping score submission');
                 return;
             }
 
             if (!isAuthenticatedUser()) {
-                console.log('[Score] Anonymous user, skipping score submission to Supabase');
+                debugLog('[Score] Anonymous user, skipping score submission to Supabase');
                 return;
             }
 
-            console.log('[Score] Submitting score for authenticated user:', userId, 'mistakes:', mistakeCount, 'date:', currentDate);
+            debugLog('[Score] Submitting score for authenticated user:', userId, 'mistakes:', mistakeCount, 'date:', currentDate);
 
             try {
                 // Insert/update single score row (one row per user per date)
@@ -3685,7 +3746,7 @@
                     date: currentDate,
                     mistakes: mistakeCount
                 };
-                console.log('[Score] Upserting score:', scoreData);
+                debugLog('[Score] Upserting score:', scoreData);
 
                 const { error } = await db
                     .from('daily_scores')
@@ -3697,7 +3758,7 @@
                 if (error) {
                     console.error('[Score] Score upsert error:', error);
                 } else {
-                    console.log('[Score] Score upserted successfully');
+                    debugLog('[Score] Score upserted successfully');
                 }
             } catch (error) {
                 console.error('[Score] Exception submitting score:', error);
@@ -3710,7 +3771,7 @@
 
             try {
                 const leagueIds = playerLeagues.map(l => l.id);
-                console.log('[Leaderboards] Fetching for leagues:', leagueIds);
+                debugLog('[Leaderboards] Fetching for leagues:', leagueIds);
 
                 // Step 1: Get ALL memberships for ALL leagues in one query
                 const { data: allMemberships, error: membershipsError } = await db
@@ -3803,7 +3864,7 @@
                     };
                 });
 
-                console.log('[Leaderboards] Built', leaderboards.length, 'leaderboards');
+                debugLog('[Leaderboards] Built', leaderboards.length, 'leaderboards');
                 return leaderboards;
 
             } catch (error) {
@@ -3832,7 +3893,7 @@
 
                 return `
                     <div class="player-rank-card">
-                        <span class="player-rank-league">${lb.league.name}</span>
+                        <span class="player-rank-league">${sanitise(lb.league.name)}</span>
                         <span class="player-rank-position">${rankText}</span>
                     </div>
                 `;
@@ -3856,7 +3917,7 @@
             document.getElementById('leagueModalLeaderboard').innerHTML = lb.leaderboard.map(player => `
                 <div class="leaderboard-item ${player.uuid === getCurrentUserId() ? 'current-player' : ''}">
                     <span class="leaderboard-rank">${player.rank !== null ? '#' + player.rank : '-'}</span>
-                    <span class="leaderboard-name">${player.display_name}</span>
+                    <span class="leaderboard-name">${sanitise(player.display_name)}</span>
                     ${player.mistakes !== null
                         ? `<span class="leaderboard-mistakes">${player.mistakes} mistake${player.mistakes !== 1 ? 's' : ''}</span>`
                         : `<span class="leaderboard-not-played">not yet played</span>`
@@ -3933,7 +3994,7 @@
                     puzzleNumber: num
                 }));
             } catch (e) {
-                console.warn('Failed to cache puzzle:', e);
+                debugLog('Failed to cache puzzle:', e);
             }
         }
 
@@ -3977,13 +4038,14 @@
         async function fetchTodayPuzzle() {
             const today = getTodayString();
             // Support ?date=YYYY-MM-DD for testing/previewing
+            // Block future dates - only allow dates <= today
             const testDate = new URLSearchParams(window.location.search).get('date');
-            const targetDate = testDate || today;
+            const targetDate = (testDate && testDate <= today) ? testDate : today;
 
             // Use demo mode if ?demo=true
             const useDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
             if (useDemo) {
-                console.log('[Demo] Using demo puzzle');
+                debugLog('[Demo] Using demo puzzle');
                 puzzleNumber = 42;
                 return DEMO_PUZZLE;
             }
@@ -4020,13 +4082,13 @@
                 // Try to use cached puzzle as fallback
                 const cached = getCachedPuzzle();
                 if (cached) {
-                    console.log('Using cached puzzle');
+                    debugLog('Using cached puzzle');
                     puzzleNumber = cached.puzzleNumber;
                     return cached.puzzle;
                 }
 
                 // Fallback to demo puzzle if nothing else works
-                console.log('[Demo] Falling back to demo puzzle');
+                debugLog('[Demo] Falling back to demo puzzle');
                 puzzleNumber = 42;
                 return DEMO_PUZZLE;
             }
@@ -4089,7 +4151,7 @@
                     throw new Error('Failed to fetch archive');
                 }
 
-                console.log('[Archive] Fetched', puzzles?.length || 0, 'of', archiveTotalCount, 'total puzzles');
+                debugLog('[Archive] Fetched', puzzles?.length || 0, 'of', archiveTotalCount, 'total puzzles');
 
                 // Calculate puzzle numbers (offset from end since sorted descending)
                 return (puzzles || []).map((p, index) => ({
@@ -4152,8 +4214,8 @@
             el.innerHTML = `
                 <div class="solved-category-badge">${difficultyNum}</div>
                 <div class="solved-category-content">
-                    <div class="solved-category-name"><span>${category.name}</span></div>
-                    <div class="solved-category-words"><span>${category.words.join(', ')}</span></div>
+                    <div class="solved-category-name"><span>${sanitise(category.name)}</span></div>
+                    <div class="solved-category-words"><span>${sanitise(category.words.join(', '))}</span></div>
                 </div>
             `;
             solvedAreaEl.appendChild(el);
@@ -4262,7 +4324,7 @@
             // Create particles at center
             const centerX = gridRect.left + gridRect.width / 2;
             const centerY = gridRect.top + gridRect.height / 2;
-            const colors = ['#F5D800', '#6CC66C', '#36DFE7', '#7E4E7E']; // Yellow, green, cyan, purple
+            const colors = ['#F5D800', '#6CC66C', '#36DFE7', '#886BB3']; // Yellow, green, cyan, purple
             const colorIndex = GRADIENT_CLASSES.indexOf(category.colour);
             createParticles(centerX, centerY, colors[colorIndex]);
 
@@ -4441,8 +4503,8 @@
                 el.innerHTML = `
                     <div class="solved-category-badge">${difficultyNum}</div>
                     <div class="solved-category-content">
-                        <div class="solved-category-name"><span>${cat.name}</span></div>
-                        <div class="solved-category-words"><span>${cat.words.join(', ')}</span></div>
+                        <div class="solved-category-name"><span>${sanitise(cat.name)}</span></div>
+                        <div class="solved-category-words"><span>${sanitise(cat.words.join(', '))}</span></div>
                     </div>
                 `;
                 endCategories.appendChild(el);
@@ -4456,26 +4518,30 @@
 
             // Show league buttons based on auth status and league membership
             const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
-            const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
             const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
 
             if (isAuthenticatedUser()) {
                 if (playerLeagues.length > 0) {
-                    // Has leagues - show View Leagues
+                    // Has leagues - show View Leagues (Create League is inside the modal)
                     viewLeaguesBtn.classList.remove('hidden');
-                    createLeagueBtnEnd.classList.add('hidden');
                     joinLeagueBtnEnd.classList.add('hidden');
                 } else {
-                    // No leagues - show Create/Join
-                    viewLeaguesBtn.classList.add('hidden');
-                    createLeagueBtnEnd.classList.remove('hidden');
+                    // No leagues - show View Leagues to access Create/Join options inside
+                    viewLeaguesBtn.classList.remove('hidden');
                     joinLeagueBtnEnd.classList.remove('hidden');
                 }
             } else {
                 // Not signed in - hide all league buttons
                 viewLeaguesBtn.classList.add('hidden');
-                createLeagueBtnEnd.classList.add('hidden');
                 joinLeagueBtnEnd.classList.add('hidden');
+            }
+
+            // Show submit puzzle button for authenticated users
+            const endSubmitPuzzleBtn = document.getElementById('endSubmitPuzzleBtn');
+            if (isAuthenticatedUser()) {
+                endSubmitPuzzleBtn.classList.remove('hidden');
+            } else {
+                endSubmitPuzzleBtn.classList.add('hidden');
             }
 
             // Show auth prompt on end screen
@@ -4790,7 +4856,7 @@
                 cachedLeaderboards = await fetchLeaderboards();
                 renderPlayerRankings(cachedLeaderboards);
             } catch (e) {
-                console.log('Could not load league data:', e);
+                debugLog('Could not load league data:', e);
             }
 
             showEndScreen();
@@ -4816,6 +4882,20 @@
             archiveBtn.addEventListener('click', () => {
                 populateArchive();
                 openModal(archiveModal);
+            });
+
+            // End screen navigation buttons (mirror header buttons)
+            document.getElementById('endStatsBtn').addEventListener('click', async () => {
+                await updateStatsDisplay();
+                openModal(statsModal);
+            });
+            document.getElementById('endRulesBtn').addEventListener('click', () => openModal(rulesModal));
+            document.getElementById('endArchiveBtn').addEventListener('click', () => {
+                populateArchive();
+                openModal(archiveModal);
+            });
+            document.getElementById('endSubmitPuzzleBtn').addEventListener('click', () => {
+                openModal(document.getElementById('submissionModal'));
             });
 
             // Sound toggle
@@ -4868,14 +4948,7 @@
             }
 
             // League event listeners
-            createLeagueBtn.addEventListener('click', () => {
-                // Require authentication to create a league
-                if (!requireAuth({ type: 'create_league' })) {
-                    return; // Will open auth modal
-                }
-                resetCreateLeagueModal();
-                openModal(createLeagueModal);
-            });
+            // Note: createLeagueBtn removed from league widget - Create League is now inside View Leagues modal
 
             createAnotherBtn.addEventListener('click', () => {
                 resetCreateLeagueModal();
@@ -4944,10 +5017,8 @@
                     await fetchPlayerLeagues();
                     cachedLeaderboards = await fetchLeaderboards();
                     const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
-                    const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
                     const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
                     viewLeaguesBtn.classList.remove('hidden');
-                    createLeagueBtnEnd.classList.add('hidden');
                     joinLeagueBtnEnd.classList.add('hidden');
                 } catch (error) {
                     showToast('Failed to create league');
@@ -4966,10 +5037,19 @@
                 await copyToClipboard(code, e.currentTarget);
             });
 
-            // End screen Create League button
-            document.getElementById('createLeagueBtnEnd').addEventListener('click', () => {
+            // Create League button inside View Leagues modal
+            document.getElementById('createLeagueFromModal').addEventListener('click', () => {
+                closeModal(viewLeaguesModal);
                 resetCreateLeagueModal();
                 openModal(createLeagueModal);
+            });
+
+            // Join League button inside View Leagues modal
+            document.getElementById('joinLeagueFromModal').addEventListener('click', () => {
+                closeModal(viewLeaguesModal);
+                document.getElementById('leagueCodeInput').value = '';
+                document.getElementById('joinByCodeError').classList.add('hidden');
+                openModal(document.getElementById('joinByCodeModal'));
             });
 
             // End screen Join League button
@@ -5018,10 +5098,8 @@
 
                     // Update buttons
                     const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
-                    const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
                     const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
                     viewLeaguesBtn.classList.remove('hidden');
-                    createLeagueBtnEnd.classList.add('hidden');
                     joinLeagueBtnEnd.classList.add('hidden');
 
                 } catch (error) {
@@ -5043,9 +5121,14 @@
                 const name = playerNameInput.value.trim();
                 if (!name) return;
 
-                const userId = getCurrentUserId();
-                console.log('[DisplayName] joinLeagueSubmit - userId:', userId);
-                if (!userId) {
+                // Get fresh user ID directly from Supabase auth
+                const { data: authData, error: authError } = await db.auth.getUser();
+                const freshUserId = authData?.user?.id;
+                debugLog('[DisplayName] joinLeagueSubmit - fresh userId from db.auth.getUser():', freshUserId);
+                debugLog('[DisplayName] joinLeagueSubmit - cached userId:', getCurrentUserId());
+
+                if (!freshUserId) {
+                    console.error('[DisplayName] joinLeagueSubmit - No user ID from auth:', authError);
                     showToast('Not signed in');
                     return;
                 }
@@ -5053,21 +5136,42 @@
                 joinLeagueSubmit.disabled = true;
                 try {
                     // Save to Supabase FIRST, before localStorage
-                    console.log('[DisplayName] Saving to Supabase:', { uuid: userId, display_name: name.trim() });
-                    const { error: dbError } = await db
+                    const upsertData = { uuid: freshUserId, display_name: name.trim() };
+                    debugLog('[DisplayName] joinLeagueSubmit - upserting data:', JSON.stringify(upsertData));
+
+                    const { data: upsertResult, error: dbError } = await db
                         .from('players')
-                        .upsert({ uuid: userId, display_name: name.trim() }, { onConflict: 'uuid' });
+                        .upsert(upsertData, { onConflict: 'uuid' })
+                        .select();
+
+                    debugLog('[DisplayName] joinLeagueSubmit - upsert response:', { data: upsertResult, error: dbError });
 
                     if (dbError) {
-                        console.error('[DisplayName] Supabase upsert failed:', dbError);
+                        console.error('[DisplayName] joinLeagueSubmit - Supabase upsert failed:', dbError);
                         showToast('Failed to save name: ' + dbError.message);
                         return;
                     }
-                    console.log('[DisplayName] Supabase save successful');
 
-                    // Only update localStorage after successful DB save
+                    // Verify the write by fetching the player row
+                    const { data: verifyData, error: verifyError } = await db
+                        .from('players')
+                        .select('uuid, display_name')
+                        .eq('uuid', freshUserId)
+                        .single();
+
+                    debugLog('[DisplayName] joinLeagueSubmit - verification fetch:', { data: verifyData, error: verifyError });
+
+                    if (verifyError || !verifyData) {
+                        console.error('[DisplayName] joinLeagueSubmit - verification failed:', verifyError);
+                        showToast('Failed to verify name save');
+                        return;
+                    }
+
+                    debugLog('[DisplayName] joinLeagueSubmit - Supabase save verified successfully');
+
+                    // Only update localStorage after verified successful DB save
                     setPlayerName(name);
-                    console.log('[DisplayName] localStorage updated');
+                    debugLog('[DisplayName] joinLeagueSubmit - localStorage updated');
 
                     // Fix 8: Read from sessionStorage with proper structure
                     const storedAction = sessionStorage.getItem('pendingLeagueAction');
@@ -5166,29 +5270,56 @@
 
                 welcomeSubmit.disabled = true;
                 try {
-                    const userId = getCurrentUserId();
-                    console.log('[DisplayName] welcomeSubmit - userId:', userId, 'name:', name);
-                    if (!userId) {
+                    // Get fresh user ID directly from Supabase auth
+                    const { data: authData, error: authError } = await db.auth.getUser();
+                    const freshUserId = authData?.user?.id;
+                    debugLog('[DisplayName] welcomeSubmit - fresh userId from db.auth.getUser():', freshUserId);
+                    debugLog('[DisplayName] welcomeSubmit - cached userId:', getCurrentUserId());
+                    debugLog('[DisplayName] welcomeSubmit - name:', name);
+
+                    if (!freshUserId) {
+                        console.error('[DisplayName] welcomeSubmit - No user ID from auth:', authError);
                         showToast('Not signed in');
                         return;
                     }
 
                     // Save to Supabase first
-                    console.log('[DisplayName] Saving to Supabase:', { uuid: userId, display_name: name });
-                    const { error: dbError } = await db
+                    const upsertData = { uuid: freshUserId, display_name: name };
+                    debugLog('[DisplayName] welcomeSubmit - upserting data:', JSON.stringify(upsertData));
+
+                    const { data: upsertResult, error: dbError } = await db
                         .from('players')
-                        .upsert({ uuid: userId, display_name: name }, { onConflict: 'uuid' });
+                        .upsert(upsertData, { onConflict: 'uuid' })
+                        .select();
+
+                    debugLog('[DisplayName] welcomeSubmit - upsert response:', { data: upsertResult, error: dbError });
 
                     if (dbError) {
-                        console.error('[DisplayName] Supabase upsert failed:', dbError);
+                        console.error('[DisplayName] welcomeSubmit - Supabase upsert failed:', dbError);
                         showToast('Failed to save name: ' + dbError.message);
                         return;
                     }
-                    console.log('[DisplayName] Supabase save successful');
 
-                    // Only update local state after successful DB save
+                    // Verify the write by fetching the player row
+                    const { data: verifyData, error: verifyError } = await db
+                        .from('players')
+                        .select('uuid, display_name')
+                        .eq('uuid', freshUserId)
+                        .single();
+
+                    debugLog('[DisplayName] welcomeSubmit - verification fetch:', { data: verifyData, error: verifyError });
+
+                    if (verifyError || !verifyData) {
+                        console.error('[DisplayName] welcomeSubmit - verification failed:', verifyError);
+                        showToast('Failed to verify name save');
+                        return;
+                    }
+
+                    debugLog('[DisplayName] welcomeSubmit - Supabase save verified successfully');
+
+                    // Only update local state after verified successful DB save
                     setPlayerName(name);
-                    console.log('[DisplayName] localStorage updated');
+                    debugLog('[DisplayName] welcomeSubmit - localStorage updated');
                     closeModal(welcomeModal);
 
                     // Update landing page welcome message
@@ -5298,24 +5429,9 @@
                     landingWelcome.classList.add('hidden');
                 }
 
-                // Show leagues if user has any
-                if (isAuthenticatedUser()) {
-                    await fetchPlayerLeagues();
-                    if (playerLeagues.length > 0) {
-                        const today = getTodayString();
-                        landingLeagues.innerHTML = playerLeagues.map(league => `
-                            <div class="landing-league-item">
-                                <span class="landing-league-name">${league.name}</span>
-                                <span class="landing-league-count">${league.played_today}/${league.total_members} played today</span>
-                            </div>
-                        `).join('');
-                        landingLeagues.classList.remove('hidden');
-                    } else {
-                        landingLeagues.classList.add('hidden');
-                    }
-                } else {
-                    landingLeagues.classList.add('hidden');
-                }
+                // Fix 5: No league references before puzzle completion
+                // Leagues only appear after puzzle completion
+                landingLeagues.classList.add('hidden');
 
                 // Show completed result if already played
                 if (hasPlayedToday) {
@@ -5343,6 +5459,25 @@
                 }
             }
 
+            // If user has already completed today's puzzle, skip landing page and go straight to results
+            if (hasPlayedToday) {
+                loadingEl.classList.add('hidden');
+                // Don't show landing page, go straight to results
+                await restoreCompletedGame(currentDate);
+
+                // Handle post-auth messaging on results screen
+                if (returningFromMagicLink) {
+                    showToast('Signed in successfully!');
+                    if (needsDisplayNamePrompt) {
+                        setTimeout(() => showDisplayNameModalIfNeeded(), 500);
+                    }
+                } else if (isAuthenticatedUser() && playerName) {
+                    showToast(`Welcome back, ${playerName}!`);
+                }
+                return; // Exit early - don't set up landing page
+            }
+
+            // User hasn't played today - show landing page
             await setupLandingPage();
 
             // Hide loading, show landing page
@@ -5378,13 +5513,13 @@
                     updateButtons();
                 }
 
-                // Load league features in background
+                // Fix 5: Only check league URL (for post-completion handling), don't show league widget before completion
                 setTimeout(async () => {
                     try {
                         await checkLeagueUrl();
-                        await renderLeagueWidget();
+                        // Don't render league widget here - leagues only appear after puzzle completion
                     } catch (e) {
-                        console.log('League features error:', e);
+                        debugLog('League features error:', e);
                     }
                 }, 100);
             }
@@ -5461,7 +5596,7 @@
                 const shuffled = [...words].sort(() => Math.random() - 0.5);
 
                 previewGrid.innerHTML = shuffled.map(word => `
-                    <div class="preview-tile">${word}</div>
+                    <div class="preview-tile">${sanitise(word)}</div>
                 `).join('');
             }
 
@@ -5563,7 +5698,7 @@
                     submissionError.classList.remove('hidden');
                 } finally {
                     submitPuzzleSubmit.disabled = false;
-                    submitPuzzleSubmit.textContent = 'Submit Puzzle';
+                    submitPuzzleSubmit.textContent = 'Submit a Puzzle';
                 }
             });
 
