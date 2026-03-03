@@ -890,11 +890,37 @@
         // ===== UTILITIES =====
         function getTodayString() {
             const now = new Date();
-            return now.toISOString().split('T')[0];
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Normalize date to YYYY-MM-DD format (handles various Supabase date formats)
+        function normalizeDate(dateStr) {
+            if (!dateStr) return '';
+            // Already in YYYY-MM-DD format
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                return dateStr;
+            }
+            // Handle ISO timestamp format (2024-03-15T00:00:00.000Z)
+            if (dateStr.includes('T')) {
+                return dateStr.split('T')[0];
+            }
+            // Try parsing as date
+            const date = new Date(dateStr);
+            if (!isNaN(date)) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            return dateStr;
         }
 
         function formatDate(dateStr) {
-            const date = new Date(dateStr + 'T00:00:00');
+            const normalized = normalizeDate(dateStr);
+            const date = new Date(normalized + 'T00:00:00');
             return date.toLocaleDateString('en-GB', {
                 weekday: 'short',
                 day: 'numeric',
@@ -905,8 +931,9 @@
 
         function getStatus(dateStr) {
             const today = getTodayString();
-            if (dateStr === today) return 'today';
-            if (dateStr > today) return 'upcoming';
+            const normalized = normalizeDate(dateStr);
+            if (normalized === today) return 'today';
+            if (normalized > today) return 'upcoming';
             return 'past';
         }
 
@@ -981,7 +1008,7 @@
 
         function updateSummary() {
             const today = getTodayString();
-            const upcoming = puzzles.filter(p => p.date > today);
+            const upcoming = puzzles.filter(p => normalizeDate(p.date) > today);
             const total = puzzles.length;
 
             totalPuzzlesEl.textContent = total;
@@ -1068,7 +1095,7 @@
                                 <button class="btn btn-danger btn-small" onclick="showDeleteConfirm('${puzzle.id}')">Delete</button>
                             </div>
                             <div class="delete-confirm" id="confirm-${puzzle.id}">
-                                <span class="delete-confirm-text">Delete puzzle for ${puzzle.date}?</span>
+                                <span class="delete-confirm-text">Delete puzzle for ${normalizeDate(puzzle.date)}?</span>
                                 <button class="btn btn-danger btn-small" onclick="confirmDelete('${puzzle.id}')">Confirm</button>
                                 <button class="btn btn-secondary btn-small" onclick="cancelDelete('${puzzle.id}')">Cancel</button>
                             </div>
@@ -1246,7 +1273,7 @@
             editingPuzzleId = id;
             openModal(true);
 
-            document.getElementById('puzzleDate').value = puzzle.date;
+            document.getElementById('puzzleDate').value = normalizeDate(puzzle.date);
             document.getElementById('puzzleDifficulty').value = puzzle.difficulty || '';
             document.getElementById('puzzleAuthor').value = puzzle.author_name || '';
 
@@ -1279,7 +1306,7 @@
             }
 
             // Check for unique date (unless editing same puzzle)
-            const existingPuzzle = puzzles.find(p => p.date === dateValue && p.id !== editingPuzzleId);
+            const existingPuzzle = puzzles.find(p => normalizeDate(p.date) === dateValue && p.id !== editingPuzzleId);
             if (existingPuzzle) {
                 dateInput.classList.add('error');
                 document.getElementById('dateError').textContent = 'A puzzle already exists for this date';
