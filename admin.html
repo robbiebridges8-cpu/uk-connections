@@ -601,7 +601,7 @@
 
         async function verifyPassword(password) {
             try {
-                const response = await fetch('/api/admin/verify', {
+                const response = await fetch('/.netlify/functions/admin-verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password })
@@ -666,7 +666,7 @@
             }
 
             try {
-                const response = await fetch('/api/admin/query', {
+                const response = await fetch('/.netlify/functions/admin-query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
