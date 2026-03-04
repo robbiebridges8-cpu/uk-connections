@@ -200,7 +200,7 @@
 
         th, td {
             border: 1px solid #e0e0e0;
-            padding: 0;
+            padding: 8px 10px;
             height: 32px;
             white-space: nowrap;
         }
@@ -209,7 +209,6 @@
             background: #f8f9fa;
             font-weight: 500;
             text-align: left;
-            padding: 8px 10px;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -280,41 +279,26 @@
             background: #e8f0fe !important;
         }
 
+        /* Clickable rows */
+        tr[data-id] {
+            cursor: pointer;
+        }
+
+        tr[data-id]:hover td {
+            background: #f0f7ff !important;
+        }
+
+        tr[data-id].selected:hover td {
+            background: #e8f0fe !important;
+        }
+
         /* Cells */
-        td input,
-        td select {
-            width: 100%;
-            height: 100%;
-            border: none;
-            padding: 6px 8px;
-            font-size: 13px;
-            font-family: inherit;
-            background: transparent;
-        }
-
-        td input:focus,
-        td select:focus {
-            outline: 2px solid #4285f4;
-            outline-offset: -2px;
-            background: white;
-        }
-
-        td input.error,
-        td select.error {
-            outline: 2px solid #d93025;
-            outline-offset: -2px;
-        }
-
-        td input.word {
-            text-transform: uppercase;
-        }
-
         td.date-cell {
-            min-width: 120px;
+            min-width: 100px;
         }
 
         td.difficulty-cell {
-            min-width: 100px;
+            min-width: 80px;
         }
 
         td.author-cell {
@@ -327,9 +311,6 @@
 
         td.words-cell {
             min-width: 220px;
-        }
-
-        td.words-cell input {
             text-transform: uppercase;
         }
 
@@ -348,6 +329,11 @@
         tr.today td.green { background: #a5d6a7; }
         tr.today td.blue { background: #81d4fa; }
         tr.today td.purple { background: #ce93d8; }
+
+        tr:hover td.yellow { background: #fff176 !important; }
+        tr:hover td.green { background: #81c784 !important; }
+        tr:hover td.blue { background: #4fc3f7 !important; }
+        tr:hover td.purple { background: #ba68c8 !important; }
 
         /* Delete confirmation */
         .delete-bar {
@@ -413,6 +399,12 @@
             background: #3367d6;
         }
 
+        .btn-primary:disabled {
+            background: #a0c4ff;
+            border-color: #a0c4ff;
+            cursor: not-allowed;
+        }
+
         /* Add row button */
         .add-row-container {
             padding: 8px 16px;
@@ -444,6 +436,184 @@
             text-align: center;
             padding: 40px;
             color: #666;
+        }
+
+        /* Edit Panel */
+        .panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 300;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+        }
+
+        .panel-overlay.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .edit-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 500px;
+            max-width: 100vw;
+            background: white;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+            z-index: 301;
+            transform: translateX(100%);
+            transition: transform 0.25s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-overlay.open .edit-panel {
+            transform: translateX(0);
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .panel-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #666;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+        }
+
+        .panel-close:hover {
+            color: #333;
+        }
+
+        .panel-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .panel-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            flex-shrink: 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4285f4;
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #4285f4;
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            line-height: 1.5;
+            resize: vertical;
+            min-height: 380px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #4285f4;
+            box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+        }
+
+        .form-textarea.error {
+            border-color: #d93025;
+            box-shadow: 0 0 0 2px rgba(217, 48, 37, 0.2);
+        }
+
+        .form-hint {
+            font-size: 11px;
+            color: #888;
+            margin-top: 6px;
+        }
+
+        .panel-error {
+            background: #fce8e6;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 12px;
+            color: #c5221f;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .panel-error.show {
+            display: block;
+        }
+
+        .panel-error ul {
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }
+
+        .panel-error li {
+            margin-bottom: 4px;
         }
     </style>
 </head>
@@ -515,6 +685,45 @@
         </div>
     </div>
 
+    <!-- Edit Panel -->
+    <div id="panelOverlay" class="panel-overlay">
+        <div class="edit-panel">
+            <div class="panel-header">
+                <span id="panelTitle" class="panel-title">Edit Puzzle</span>
+                <button id="panelClose" class="panel-close">&times;</button>
+            </div>
+            <div class="panel-body">
+                <div id="panelError" class="panel-error"></div>
+
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" id="panelDate" class="form-input">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Difficulty</label>
+                    <select id="panelDifficulty" class="form-select">
+                        <option value="">-- Select --</option>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                        <option value="very_hard">Very Hard</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Categories (JSON)</label>
+                    <textarea id="panelCategories" class="form-textarea" spellcheck="false"></textarea>
+                    <p class="form-hint">Each category needs: title, 4 words, and difficulty (1-4). Words will be auto-uppercased.</p>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button id="panelCancel" class="btn">Cancel</button>
+                <button id="panelSave" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== DEBUG =====
         const DEBUG = false;
@@ -526,6 +735,7 @@
         let selectedRowId = null;
         let sortAsc = true;
         let searchTerm = '';
+        let editingPuzzleId = null; // null = new puzzle, string = editing existing
 
         // ===== DOM =====
         const loginOverlay = document.getElementById('loginOverlay');
@@ -543,6 +753,17 @@
         const deleteText = document.getElementById('deleteText');
         const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
         const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+        // Panel elements
+        const panelOverlay = document.getElementById('panelOverlay');
+        const panelTitle = document.getElementById('panelTitle');
+        const panelClose = document.getElementById('panelClose');
+        const panelError = document.getElementById('panelError');
+        const panelDate = document.getElementById('panelDate');
+        const panelDifficulty = document.getElementById('panelDifficulty');
+        const panelCategories = document.getElementById('panelCategories');
+        const panelCancel = document.getElementById('panelCancel');
+        const panelSave = document.getElementById('panelSave');
 
         // ===== UTILITIES =====
         function getTodayString() {
@@ -582,6 +803,13 @@
                     }
                 }, 2000);
             }
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(str)));
+            return div.innerHTML;
         }
 
         // ===== AUTH =====
@@ -676,7 +904,6 @@
                 });
 
                 if (response.status === 401) {
-                    // Token expired, force re-login
                     handleLogout();
                     throw new Error('Session expired');
                 }
@@ -719,13 +946,6 @@
         }
 
         // ===== RENDER =====
-        function escapeHtml(str) {
-            if (str == null) return '';
-            const div = document.createElement('div');
-            div.appendChild(document.createTextNode(String(str)));
-            return div.innerHTML;
-        }
-
         function renderTable() {
             let filtered = puzzles;
             if (searchTerm) {
@@ -747,207 +967,59 @@
                 return;
             }
 
-            // Color mapping: index 0=yellow(tier1), 1=green(tier2), 2=blue(tier3), 3=purple(tier4)
             const colorClasses = ['yellow', 'green', 'blue', 'purple'];
+            const difficultyLabels = { easy: 'Easy', medium: 'Medium', hard: 'Hard', very_hard: 'Very Hard' };
 
             tableBody.innerHTML = filtered.map((puzzle, idx) => {
                 const status = getRowStatus(puzzle.date);
                 const cats = puzzle.categories || [{}, {}, {}, {}];
                 const isSelected = puzzle.id === selectedRowId;
 
-                // Sort categories by difficulty/tier to ensure correct color mapping
+                // Sort categories by difficulty to ensure correct color mapping
                 const sortedCats = [...cats].sort((a, b) => (a.difficulty || 1) - (b.difficulty || 1));
 
                 return `
                     <tr class="${status} ${isSelected ? 'selected' : ''}" data-id="${escapeHtml(puzzle.id)}">
-                        <td class="row-num" onclick="selectRow('${escapeHtml(puzzle.id)}')">${idx + 1}</td>
-                        <td class="date-cell">
-                            <input type="date" value="${escapeHtml(normalizeDate(puzzle.date))}" data-field="date" data-id="${escapeHtml(puzzle.id)}">
-                        </td>
-                        <td class="difficulty-cell">
-                            <select data-field="difficulty" data-id="${escapeHtml(puzzle.id)}">
-                                <option value="">--</option>
-                                <option value="easy" ${puzzle.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
-                                <option value="medium" ${puzzle.difficulty === 'medium' ? 'selected' : ''}>Medium</option>
-                                <option value="hard" ${puzzle.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
-                                <option value="very_hard" ${puzzle.difficulty === 'very_hard' ? 'selected' : ''}>Very Hard</option>
-                            </select>
-                        </td>
+                        <td class="row-num">${idx + 1}</td>
+                        <td class="date-cell">${escapeHtml(normalizeDate(puzzle.date))}</td>
+                        <td class="difficulty-cell">${escapeHtml(difficultyLabels[puzzle.difficulty] || '--')}</td>
                         ${[0, 1, 2, 3].map(colorIdx => {
                             const cat = sortedCats[colorIdx] || {};
                             const words = cat.words || [];
                             const wordsStr = words.join(', ');
                             const colorClass = colorClasses[colorIdx];
                             return `
-                                <td class="category-cell ${colorClass}">
-                                    <input type="text" value="${escapeHtml(cat.title || '')}" data-field="${colorClass}_title" data-id="${escapeHtml(puzzle.id)}">
-                                </td>
-                                <td class="words-cell ${colorClass}">
-                                    <input type="text" value="${escapeHtml(wordsStr)}" data-field="${colorClass}_words" data-id="${escapeHtml(puzzle.id)}" placeholder="WORD1, WORD2, WORD3, WORD4">
-                                </td>
+                                <td class="category-cell ${colorClass}">${escapeHtml(cat.title || '')}</td>
+                                <td class="words-cell ${colorClass}">${escapeHtml(wordsStr)}</td>
                             `;
                         }).join('')}
-                        <td class="author-cell">
-                            <input type="text" value="${escapeHtml(puzzle.author_name || '')}" data-field="author_name" data-id="${escapeHtml(puzzle.id)}">
-                        </td>
+                        <td class="author-cell">${escapeHtml(puzzle.author_name || '')}</td>
                     </tr>
                 `;
             }).join('');
 
-            attachCellListeners();
+            attachRowListeners();
         }
 
-        function attachCellListeners() {
-            tableBody.querySelectorAll('input, select').forEach(el => {
-                el.addEventListener('blur', handleCellChange);
-                el.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        el.blur();
-                    }
+        function attachRowListeners() {
+            tableBody.querySelectorAll('tr[data-id]').forEach(row => {
+                const id = row.dataset.id;
+
+                // Row number click = select for delete
+                row.querySelector('.row-num').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectRow(id);
+                });
+
+                // Rest of row click = open edit panel
+                row.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('row-num')) return;
+                    openEditPanel(id);
                 });
             });
         }
 
-        // ===== CELL EDITING =====
-        async function handleCellChange(e) {
-            const el = e.target;
-            const id = el.dataset.id;
-            const field = el.dataset.field;
-            let value = el.value;
-
-            // Handle words cells specially
-            if (field.endsWith('_words')) {
-                const words = value.split(',').map(w => w.trim().toUpperCase()).filter(w => w);
-
-                if (words.length !== 4 && words.length !== 0) {
-                    el.classList.add('error');
-                    showStatus('Each category needs exactly 4 words', 'error');
-                    return;
-                }
-
-                el.value = words.join(', ');
-            }
-
-            const row = el.closest('tr');
-            const puzzleData = buildPuzzleDataFromRow(row);
-
-            const validation = validatePuzzle(puzzleData, id);
-            if (!validation.valid) {
-                el.classList.add('error');
-                showStatus(validation.error, 'error');
-                return;
-            }
-
-            el.classList.remove('error');
-            row.querySelectorAll('.error').forEach(e => e.classList.remove('error'));
-
-            await savePuzzle(id, puzzleData);
-        }
-
-        function buildPuzzleDataFromRow(row) {
-            const inputs = row.querySelectorAll('input, select');
-            const data = {
-                date: '',
-                difficulty: null,
-                author_name: null,
-                categories: [
-                    { title: '', difficulty: 1, words: [] },
-                    { title: '', difficulty: 2, words: [] },
-                    { title: '', difficulty: 3, words: [] },
-                    { title: '', difficulty: 4, words: [] }
-                ]
-            };
-
-            const colorToIdx = { yellow: 0, green: 1, blue: 2, purple: 3 };
-
-            inputs.forEach(input => {
-                const field = input.dataset.field;
-                let value = input.value;
-
-                if (field === 'date') {
-                    data.date = value;
-                } else if (field === 'difficulty') {
-                    data.difficulty = value || null;
-                } else if (field === 'author_name') {
-                    data.author_name = value || null;
-                } else if (field.endsWith('_title')) {
-                    const color = field.replace('_title', '');
-                    const idx = colorToIdx[color];
-                    if (idx !== undefined) {
-                        data.categories[idx].title = value;
-                    }
-                } else if (field.endsWith('_words')) {
-                    const color = field.replace('_words', '');
-                    const idx = colorToIdx[color];
-                    if (idx !== undefined) {
-                        const words = value.split(',').map(w => w.trim().toUpperCase()).filter(w => w);
-                        data.categories[idx].words = words;
-                    }
-                }
-            });
-
-            return data;
-        }
-
-        function validatePuzzle(data, currentId) {
-            if (!data.date) {
-                return { valid: false, error: 'Date is required' };
-            }
-
-            const existingWithDate = puzzles.find(p => normalizeDate(p.date) === data.date && p.id !== currentId);
-            if (existingWithDate) {
-                return { valid: false, error: 'Date already exists' };
-            }
-
-            const allWords = [];
-            const colorNames = ['Yellow', 'Green', 'Blue', 'Purple'];
-            for (let i = 0; i < data.categories.length; i++) {
-                const cat = data.categories[i];
-                const words = cat.words || [];
-
-                if (words.length > 0 && words.length !== 4) {
-                    return { valid: false, error: `${colorNames[i]} needs exactly 4 words` };
-                }
-
-                for (const word of words) {
-                    if (word) allWords.push(word);
-                }
-            }
-
-            const uniqueWords = new Set(allWords);
-            if (uniqueWords.size !== allWords.length) {
-                return { valid: false, error: 'Duplicate words found' };
-            }
-
-            return { valid: true };
-        }
-
-        async function savePuzzle(id, data) {
-            showStatus('Saving...', 'saving');
-
-            try {
-                await adminQuery('puzzles', 'update', {
-                    date: data.date,
-                    difficulty: data.difficulty,
-                    author_name: data.author_name,
-                    categories: data.categories
-                }, id);
-
-                const idx = puzzles.findIndex(p => p.id === id);
-                if (idx !== -1) {
-                    puzzles[idx] = { ...puzzles[idx], ...data };
-                }
-
-                updateWarningBanner();
-                showStatus('Saved', 'saved');
-            } catch (e) {
-                console.error('Save failed:', e);
-                showStatus('Error saving', 'error');
-            }
-        }
-
-        // ===== ROW MANAGEMENT =====
+        // ===== ROW SELECTION (for delete) =====
         function selectRow(id) {
             if (selectedRowId === id) {
                 selectedRowId = null;
@@ -961,57 +1033,6 @@
                 }
             }
             renderTable();
-        }
-        window.selectRow = selectRow;
-
-        async function addNewRow() {
-            let nextDate = getTomorrowString();
-            const existingDates = new Set(puzzles.map(p => normalizeDate(p.date)));
-            while (existingDates.has(nextDate)) {
-                const d = new Date(nextDate);
-                d.setDate(d.getDate() + 1);
-                nextDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            }
-
-            const newPuzzle = {
-                date: nextDate,
-                difficulty: null,
-                author_name: null,
-                categories: [
-                    { title: '', difficulty: 1, words: ['', '', '', ''] },
-                    { title: '', difficulty: 2, words: ['', '', '', ''] },
-                    { title: '', difficulty: 3, words: ['', '', '', ''] },
-                    { title: '', difficulty: 4, words: ['', '', '', ''] }
-                ]
-            };
-
-            showStatus('Adding...', 'saving');
-
-            try {
-                const result = await adminQuery('puzzles', 'insert', newPuzzle);
-                const data = result.data;
-
-                puzzles.push(data);
-                puzzles.sort((a, b) => sortAsc
-                    ? normalizeDate(a.date).localeCompare(normalizeDate(b.date))
-                    : normalizeDate(b.date).localeCompare(normalizeDate(a.date))
-                );
-
-                updateWarningBanner();
-                renderTable();
-                showStatus('Added', 'saved');
-
-                setTimeout(() => {
-                    const newRow = tableBody.querySelector(`tr[data-id="${data.id}"]`);
-                    if (newRow) {
-                        const firstInput = newRow.querySelector('input');
-                        if (firstInput) firstInput.focus();
-                    }
-                }, 50);
-            } catch (e) {
-                console.error('Add failed:', e);
-                showStatus('Error adding', 'error');
-            }
         }
 
         async function deleteSelectedRow() {
@@ -1032,6 +1053,238 @@
             } catch (e) {
                 console.error('Delete failed:', e);
                 showStatus('Error deleting', 'error');
+            }
+        }
+
+        // ===== EDIT PANEL =====
+        const EMPTY_CATEGORIES_JSON = `[
+  {"title": "", "words": ["", "", "", ""], "difficulty": 1},
+  {"title": "", "words": ["", "", "", ""], "difficulty": 2},
+  {"title": "", "words": ["", "", "", ""], "difficulty": 3},
+  {"title": "", "words": ["", "", "", ""], "difficulty": 4}
+]`;
+
+        function openEditPanel(puzzleId) {
+            editingPuzzleId = puzzleId;
+            const puzzle = puzzles.find(p => p.id === puzzleId);
+
+            if (!puzzle) return;
+
+            panelTitle.textContent = `Edit Puzzle - ${normalizeDate(puzzle.date)}`;
+            panelDate.value = normalizeDate(puzzle.date);
+            panelDifficulty.value = puzzle.difficulty || '';
+
+            // Format categories as JSON
+            const cats = puzzle.categories || [];
+            const sortedCats = [...cats].sort((a, b) => (a.difficulty || 1) - (b.difficulty || 1));
+            const catsForJson = sortedCats.map(c => ({
+                title: c.title || '',
+                words: c.words || ['', '', '', ''],
+                difficulty: c.difficulty || 1
+            }));
+            panelCategories.value = JSON.stringify(catsForJson, null, 2);
+
+            clearPanelError();
+            panelOverlay.classList.add('open');
+            panelDate.focus();
+        }
+
+        function openNewPuzzlePanel() {
+            editingPuzzleId = null;
+
+            // Find next available date
+            let nextDate = getTomorrowString();
+            const existingDates = new Set(puzzles.map(p => normalizeDate(p.date)));
+            while (existingDates.has(nextDate)) {
+                const d = new Date(nextDate);
+                d.setDate(d.getDate() + 1);
+                nextDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+
+            panelTitle.textContent = 'Add New Puzzle';
+            panelDate.value = nextDate;
+            panelDifficulty.value = '';
+            panelCategories.value = EMPTY_CATEGORIES_JSON;
+
+            clearPanelError();
+            panelOverlay.classList.add('open');
+            panelDate.focus();
+        }
+
+        function closePanel() {
+            panelOverlay.classList.remove('open');
+            editingPuzzleId = null;
+            clearPanelError();
+        }
+
+        function clearPanelError() {
+            panelError.classList.remove('show');
+            panelError.innerHTML = '';
+            panelCategories.classList.remove('error');
+        }
+
+        function showPanelError(messages) {
+            if (typeof messages === 'string') {
+                messages = [messages];
+            }
+
+            if (messages.length === 1) {
+                panelError.innerHTML = messages[0];
+            } else {
+                panelError.innerHTML = 'Please fix the following errors:<ul>' +
+                    messages.map(m => `<li>${escapeHtml(m)}</li>`).join('') +
+                    '</ul>';
+            }
+
+            panelError.classList.add('show');
+            panelCategories.classList.add('error');
+        }
+
+        function validatePanelData() {
+            const errors = [];
+            const date = panelDate.value;
+            const categoriesJson = panelCategories.value;
+
+            // Validate date
+            if (!date) {
+                errors.push('Date is required');
+            } else {
+                // Check for duplicate date (excluding current puzzle if editing)
+                const existingWithDate = puzzles.find(p =>
+                    normalizeDate(p.date) === date && p.id !== editingPuzzleId
+                );
+                if (existingWithDate) {
+                    errors.push('A puzzle already exists for this date');
+                }
+            }
+
+            // Parse and validate JSON
+            let categories;
+            try {
+                categories = JSON.parse(categoriesJson);
+            } catch (e) {
+                errors.push('Invalid JSON syntax: ' + e.message);
+                return { valid: false, errors };
+            }
+
+            // Validate structure
+            if (!Array.isArray(categories)) {
+                errors.push('Categories must be an array');
+                return { valid: false, errors };
+            }
+
+            if (categories.length !== 4) {
+                errors.push(`Must have exactly 4 categories (found ${categories.length})`);
+                return { valid: false, errors };
+            }
+
+            const allWords = [];
+            const colorNames = ['Yellow (1)', 'Green (2)', 'Blue (3)', 'Purple (4)'];
+
+            for (let i = 0; i < categories.length; i++) {
+                const cat = categories[i];
+                const catName = colorNames[i] || `Category ${i + 1}`;
+
+                if (!cat.title || cat.title.trim() === '') {
+                    errors.push(`${catName}: Title is required`);
+                }
+
+                if (!Array.isArray(cat.words)) {
+                    errors.push(`${catName}: Words must be an array`);
+                    continue;
+                }
+
+                if (cat.words.length !== 4) {
+                    errors.push(`${catName}: Must have exactly 4 words (found ${cat.words.length})`);
+                    continue;
+                }
+
+                for (let j = 0; j < cat.words.length; j++) {
+                    const word = cat.words[j];
+                    if (!word || String(word).trim() === '') {
+                        errors.push(`${catName}: Word ${j + 1} is empty`);
+                    } else {
+                        allWords.push(String(word).trim().toUpperCase());
+                    }
+                }
+            }
+
+            // Check for duplicate words
+            const uniqueWords = new Set(allWords);
+            if (uniqueWords.size !== allWords.length) {
+                const seen = {};
+                const duplicates = [];
+                for (const word of allWords) {
+                    if (seen[word] && !duplicates.includes(word)) {
+                        duplicates.push(word);
+                    }
+                    seen[word] = true;
+                }
+                errors.push(`Duplicate words found: ${duplicates.join(', ')}`);
+            }
+
+            if (errors.length > 0) {
+                return { valid: false, errors };
+            }
+
+            // Process categories - uppercase words and ensure difficulty
+            const processedCategories = categories.map((cat, idx) => ({
+                title: cat.title.trim(),
+                words: cat.words.map(w => String(w).trim().toUpperCase()),
+                difficulty: cat.difficulty || (idx + 1)
+            }));
+
+            return {
+                valid: true,
+                data: {
+                    date,
+                    difficulty: panelDifficulty.value || null,
+                    categories: processedCategories
+                }
+            };
+        }
+
+        async function handlePanelSave() {
+            clearPanelError();
+
+            const validation = validatePanelData();
+            if (!validation.valid) {
+                showPanelError(validation.errors);
+                return;
+            }
+
+            panelSave.disabled = true;
+            showStatus('Saving...', 'saving');
+
+            try {
+                if (editingPuzzleId) {
+                    // Update existing
+                    await adminQuery('puzzles', 'update', validation.data, editingPuzzleId);
+
+                    const idx = puzzles.findIndex(p => p.id === editingPuzzleId);
+                    if (idx !== -1) {
+                        puzzles[idx] = { ...puzzles[idx], ...validation.data };
+                    }
+                } else {
+                    // Insert new
+                    const result = await adminQuery('puzzles', 'insert', validation.data);
+                    puzzles.push(result.data);
+                    puzzles.sort((a, b) => sortAsc
+                        ? normalizeDate(a.date).localeCompare(normalizeDate(b.date))
+                        : normalizeDate(b.date).localeCompare(normalizeDate(a.date))
+                    );
+                }
+
+                updateWarningBanner();
+                renderTable();
+                showStatus('Saved', 'saved');
+                closePanel();
+            } catch (e) {
+                console.error('Save failed:', e);
+                showPanelError('Failed to save: ' + e.message);
+                showStatus('Error saving', 'error');
+            } finally {
+                panelSave.disabled = false;
             }
         }
 
@@ -1057,7 +1310,8 @@
             renderTable();
         });
 
-        addRowBtn.addEventListener('click', addNewRow);
+        addRowBtn.addEventListener('click', openNewPuzzlePanel);
+
         cancelDeleteBtn.addEventListener('click', () => {
             selectedRowId = null;
             deleteBar.classList.remove('show');
@@ -1065,19 +1319,31 @@
         });
         confirmDeleteBtn.addEventListener('click', deleteSelectedRow);
 
+        // Panel events
+        panelClose.addEventListener('click', closePanel);
+        panelCancel.addEventListener('click', closePanel);
+        panelSave.addEventListener('click', handlePanelSave);
+
+        panelOverlay.addEventListener('click', (e) => {
+            if (e.target === panelOverlay) closePanel();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && panelOverlay.classList.contains('open')) {
+                closePanel();
+            }
+        });
+
         // ===== INIT =====
         async function init() {
-            // Check for existing session
             const storedToken = getStoredToken();
             if (storedToken) {
                 adminToken = storedToken;
-                // Verify token is still valid by trying to load puzzles
                 try {
                     await loadPuzzles();
                     loginOverlay.classList.add('hidden');
                     mainContent.style.display = 'block';
                 } catch (e) {
-                    // Token invalid, show login
                     clearToken();
                     passwordInput.focus();
                 }
