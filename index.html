@@ -3802,12 +3802,8 @@
                     return [];
                 }
 
-                // DEBUG: Log raw memberships data
-                console.log('[Leaderboards DEBUG] Step 1 - Raw memberships:', JSON.stringify(allMemberships, null, 2));
-
                 // Step 2: Get ALL daily_scores for ALL member UUIDs in one query
                 const allMemberUuids = [...new Set((allMemberships || []).map(m => m.player_uuid))];
-                console.log('[Leaderboards DEBUG] Step 2 - Member UUIDs to query:', allMemberUuids);
 
                 let scoresMap = {};
                 if (allMemberUuids.length > 0) {
@@ -3817,9 +3813,6 @@
                         .in('player_uuid', allMemberUuids)
                         .eq('date', currentDate);
 
-                    console.log('[Leaderboards DEBUG] Step 2 - Query date:', currentDate);
-                    console.log('[Leaderboards DEBUG] Step 2 - Raw scores from DB:', JSON.stringify(allScores, null, 2));
-
                     if (scoresError) {
                         console.error('[Leaderboards] Error fetching scores:', scoresError);
                         // Continue without scores
@@ -3828,8 +3821,6 @@
                         (allScores || []).forEach(s => {
                             scoresMap[s.player_uuid] = s;
                         });
-                        console.log('[Leaderboards DEBUG] Step 2 - scoresMap keys:', Object.keys(scoresMap));
-                        console.log('[Leaderboards DEBUG] Step 2 - scoresMap:', JSON.stringify(scoresMap, null, 2));
                     }
                 }
 
@@ -3845,12 +3836,10 @@
                 // Step 4: Build leaderboard for each league
                 const leaderboards = playerLeagues.map(league => {
                     const memberships = membershipsByLeague[league.id] || [];
-                    console.log('[Leaderboards DEBUG] Step 4 - League:', league.name, 'memberships:', memberships.length);
 
                     // Build member list with scores
                     const members = memberships.map(m => {
                         const score = scoresMap[m.player_uuid];
-                        console.log('[Leaderboards DEBUG] Step 4 - Matching player_uuid:', m.player_uuid, 'found score:', score, 'in scoresMap keys:', Object.keys(scoresMap));
                         return {
                             uuid: m.player_uuid,
                             display_name: m.players?.display_name || 'Unknown',
@@ -3886,7 +3875,6 @@
                         return { ...member, rank: null };
                     });
 
-                    console.log('[Leaderboards DEBUG] Step 4 - Final leaderboard for', league.name, ':', JSON.stringify(leaderboard, null, 2));
                     return {
                         league: { id: league.id, name: league.name },
                         date: currentDate,
@@ -3894,7 +3882,6 @@
                     };
                 });
 
-                console.log('[Leaderboards DEBUG] Final leaderboards array:', JSON.stringify(leaderboards, null, 2));
                 debugLog('[Leaderboards] Built', leaderboards.length, 'leaderboards');
                 return leaderboards;
 
@@ -3938,7 +3925,6 @@
 
             currentLeagueIndex = index;
             const lb = cachedLeaderboards[index];
-            console.log('[Leaderboards DEBUG] renderLeagueModal - Rendering leaderboard:', JSON.stringify(lb, null, 2));
 
             document.getElementById('leagueModalTitle').textContent = lb.league.name;
             document.getElementById('leagueIndicator').textContent = `${index + 1} / ${cachedLeaderboards.length}`;
