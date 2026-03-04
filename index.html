@@ -1418,6 +1418,19 @@
             flex-wrap: wrap;
         }
 
+        .game-puzzle-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .game-puzzle-number {
+            font-size: 0.85rem;
+            opacity: 0.6;
+        }
+
         /* Author attribution */
         .puzzle-author {
             font-size: 0.7rem;
@@ -2031,6 +2044,10 @@
                 <button class="btn btn-secondary" id="backToTodayBtn">&larr; Back to Today</button>
                 <span class="past-puzzle-label" id="pastPuzzleLabel">Playing Puzzle #1</span>
             </div>
+            <div class="game-puzzle-info">
+                <span class="game-puzzle-number" id="gamePuzzleNumber"></span>
+                <span class="difficulty-badge hidden" id="gameDifficulty"></span>
+            </div>
             <div class="difficulty-legend">
                 <span class="difficulty-label">Easy</span>
                 <div class="difficulty-swatches">
@@ -2223,6 +2240,7 @@
         </div>
         <div class="buttons-area" id="endScreenButtons">
             <button class="btn btn-secondary hidden" id="viewLeaguesBtn">View Leagues</button>
+            <button class="btn btn-secondary hidden" id="createLeagueBtnEnd">Create League</button>
             <button class="btn btn-secondary hidden" id="joinLeagueBtnEnd">Join League</button>
             <button class="btn btn-primary" id="shareBtn">Share Result</button>
         </div>
@@ -4519,20 +4537,24 @@
             // Show league buttons based on auth status and league membership
             const viewLeaguesBtn = document.getElementById('viewLeaguesBtn');
             const joinLeagueBtnEnd = document.getElementById('joinLeagueBtnEnd');
+            const createLeagueBtnEnd = document.getElementById('createLeagueBtnEnd');
 
             if (isAuthenticatedUser()) {
                 if (playerLeagues.length > 0) {
-                    // Has leagues - show View Leagues (Create League is inside the modal)
+                    // Has leagues - show View Leagues
                     viewLeaguesBtn.classList.remove('hidden');
+                    createLeagueBtnEnd.classList.add('hidden');
                     joinLeagueBtnEnd.classList.add('hidden');
                 } else {
-                    // No leagues - show View Leagues to access Create/Join options inside
-                    viewLeaguesBtn.classList.remove('hidden');
+                    // No leagues - show Create League and Join League buttons
+                    viewLeaguesBtn.classList.add('hidden');
+                    createLeagueBtnEnd.classList.remove('hidden');
                     joinLeagueBtnEnd.classList.remove('hidden');
                 }
             } else {
                 // Not signed in - hide all league buttons
                 viewLeaguesBtn.classList.add('hidden');
+                createLeagueBtnEnd.classList.add('hidden');
                 joinLeagueBtnEnd.classList.add('hidden');
             }
 
@@ -4905,7 +4927,7 @@
 
             // Back to today button (for past puzzles)
             document.getElementById('backToTodayBtn').addEventListener('click', async () => {
-                // Return to landing page
+                // Return to today's puzzle
                 isPlayingPastPuzzle = false;
                 document.getElementById('pastPuzzleBack').classList.add('hidden');
                 gameAreaEl.classList.add('hidden');
@@ -4921,10 +4943,25 @@
                     }
                 }
 
-                // Show landing page
-                const landingPage = document.getElementById('landingPage');
-                landingPage.classList.remove('hidden');
-                document.body.classList.add('on-landing-page');
+                // Check if today's puzzle is completed
+                const stats = getStats();
+                if (stats.played[todaysPuzzleDate]) {
+                    // Today's puzzle is completed - show the end screen
+                    // Reset game state for display
+                    solvedCategories = [];
+                    remainingWords = [];
+                    mistakes = stats.played[todaysPuzzleDate].mistakes;
+                    gameOver = true;
+
+                    // Restore and show completed game
+                    await restoreCompletedGame(todaysPuzzleDate);
+                    showEndScreen(stats.played[todaysPuzzleDate].won);
+                } else {
+                    // Not completed - show landing page
+                    const landingPage = document.getElementById('landingPage');
+                    landingPage.classList.remove('hidden');
+                    document.body.classList.add('on-landing-page');
+                }
             });
 
             // Re-scale text on window resize
@@ -5063,6 +5100,12 @@
                 joinByCodeError.classList.add('hidden');
                 joinByCodeError.textContent = '';
                 openModal(joinByCodeModal);
+            });
+
+            // End screen Create League button
+            document.getElementById('createLeagueBtnEnd').addEventListener('click', () => {
+                resetCreateLeagueModal();
+                openModal(createLeagueModal);
             });
 
             joinByCodeSubmit.addEventListener('click', async () => {
@@ -5503,6 +5546,26 @@
                 landingPage.classList.add('hidden');
                 document.body.classList.remove('on-landing-page');
                 gameAreaEl.classList.remove('hidden');
+
+                // Update puzzle info in game area
+                const gamePuzzleNumber = document.getElementById('gamePuzzleNumber');
+                const gameDifficulty = document.getElementById('gameDifficulty');
+                gamePuzzleNumber.textContent = `Puzzle #${puzzleNumber}`;
+
+                // Show difficulty badge if puzzle has difficulty set
+                if (currentPuzzle.difficulty) {
+                    const difficultyLabels = {
+                        'easy': 'Easy',
+                        'medium': 'Medium',
+                        'hard': 'Hard',
+                        'very_hard': 'Very Hard'
+                    };
+                    const difficultyClass = currentPuzzle.difficulty.replace('_', '-');
+                    gameDifficulty.textContent = difficultyLabels[currentPuzzle.difficulty] || currentPuzzle.difficulty;
+                    gameDifficulty.className = `difficulty-badge ${difficultyClass}`;
+                } else {
+                    gameDifficulty.classList.add('hidden');
+                }
 
                 if (hasPlayedToday) {
                     restoreCompletedGame(currentDate);
